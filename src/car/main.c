@@ -79,13 +79,19 @@ int main(int argc, char **argv) {
         }
 
         if (next_line) {
-            log_info("downloading package");
+            log_info("downloading package and installing");
             fflush(stdout);
-            char command[512];
-            snprintf(command, sizeof(command), "curl -s -L -o /tmp/car.tar.zst %s", next_line);
+
+            char command[256];
+            snprintf(command, sizeof(command),
+              "curl -s -L -o /tmp/car.tar.zst \"%s\"",
+              next_line
+            );
             system(command);
+
             fputs("\r\033[K", stdout);
             fflush(stdout);
+
             free(next_line);
         } else {
             log_error("package not found");
@@ -99,14 +105,6 @@ int main(int argc, char **argv) {
       } else {
         install(argv[i], NULL);
       }
-    }
-    char msg[100];
-    if (argc == 3) {
-      snprintf(msg, sizeof(msg), "installed %d package", argc - 2);
-      log_done(msg);
-    } else {
-      snprintf(msg, sizeof(msg), "installed %d packages", argc - 2);
-      log_done(msg);
     }
   } else if (strcmp(argv[1], "updatelist") == 0) {
     updatelist();

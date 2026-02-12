@@ -7,13 +7,15 @@
 #include "../misc/trim.c"
 
 int install(char *package, char* alias) {
+    char default_alias[32];
     if (alias == NULL) {
-        snprintf(alias, sizeof(alias), "%s", package);
+        alias = default_alias;
+        snprintf(alias, sizeof(default_alias), "%s", package);
     }
 
     FILE *repro = fopen("/etc/repro.car", "r");
     if (repro == NULL) {
-    log_error("car not initialized");
+        log_error("car not initialized");
     }
 
     fseek(repro, 0, SEEK_END);
@@ -108,6 +110,20 @@ int install(char *package, char* alias) {
     system("cp -a /tmp/car/. /"); 
     remove("/car");
 
+    FILE* h_config = fopen("/etc/repro.car", "a");
+    if (h_config == NULL) {
+        log_error("i think you just deleted repro.car while i was installing HEYY");
+        return -69;
+    }
+
+    if (h_config != NULL && alias != NULL) {
+        fseek(h_config, 0, SEEK_END);
+        fprintf(h_config, "%s=%s\n", alias, version);
+        fflush(h_config);
+    }
+
+    fclose(h_config);
+
     clock_gettime(CLOCK_MONOTONIC, &end);
 
     double elapsed =
@@ -117,10 +133,8 @@ int install(char *package, char* alias) {
     char msg[150];
 
     if (elapsed >= 1.0) {
-      // Show seconds with 2 decimal places
       snprintf(msg, sizeof(msg), "installed %s (%s) in %.2f seconds", alias, version, elapsed);
     } else {
-      // Show milliseconds
       snprintf(msg, sizeof(msg), "installed %s (%s) in %.0f ms", alias, version, elapsed * 1000);
     }
 
