@@ -12,3 +12,9 @@ proc log_done*(message: string) =
 
 proc log_info*(message: string) =
   echo "\e[1m\e[94minfo\e[0m: " & message
+
+proc log_pick*(message: string) =
+  echo "\e[1m\e[127mpick\e[0m: " & message
+
+proc log_option*(message: string) =
+  echo "\e[1m\e[94moption\e[0m: " & message

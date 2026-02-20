@@ -17,12 +17,12 @@ proc isRoot() =
 proc usage() =
   log_info("Usage: car [options]")
   log_info("Options: (F = flag)")
-  log_info("  -v, --version   Show version information and exit")
-  log_info("  init            Initialize Car")
-  log_info("F --force         Force initialization when already initialized")
-  log_info("  listup          Update list of packages")
-  log_info("  install         Install packages")
-  log_info("  delete          Delete packages")
+  log_info("  -v, --version   show version information and exit")
+  log_info("  init            initialize car")
+  log_info("F --force         force initialization when already initialized")
+  log_info("  listup          update list of packages")
+  log_info("  install         install packages")
+  log_info("  delete          delete packages")
   log_info("")
   log_info("License: GPLv3-only")
   log_info("Authors: Juraj Kollár <mostypc7@gmail.com>")
@@ -48,7 +48,7 @@ when isMainModule:
       elif arg == "listup":
         isRoot()
         listup()
-      elif arg == "install":
+      elif arg in ["install", "get", "i"]:
         if args.len < 2:
           log_error("missing package name")
           usage()

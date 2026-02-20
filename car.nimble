@@ -6,4 +6,3 @@ srcDir = "src"
 bin = @["car"]
 
 requires "nim >= 2.2.6"
-requires "nimarchive"
