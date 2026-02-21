@@ -47,12 +47,17 @@ proc install*(packages: seq[string]) =
 
   var local_packages: seq[string]
   var remote_packages: seq[string]
+  var already_installed_packages: seq[string]
 
   let downloadStart = getTime()
 
   var packagelist = readFile("/etc/car/packagelist")
 
   for pkg in packages:
+    if pkg in readFile("/etc/repro.car"):
+      log_info("package already installed: " & pkg)
+      already_installed_packages.add(pkg)
+      continue
     var download_disable = false
     if fileExists("/tmp/" & pkg & ".tar.zst"):
       log_info("package cached: " & pkg)
@@ -77,6 +82,9 @@ proc install*(packages: seq[string]) =
     log_ok("downloads took " & $downloadSeconds & " seconds")
 
   for i in local_packages:
+    if i in already_installed_packages:
+      log_info("package already installed: " & i)
+      continue
     var displayName = i
     if "/" in displayName:
       displayName = displayName[displayName.rfind("/") + 1 .. ^1]
@@ -90,6 +98,9 @@ proc install*(packages: seq[string]) =
   discard execShellCmd("rm -f /car")
 
   for i in remote_packages:
+    if i in already_installed_packages:
+      log_info("package already installed: " & i)
+      continue
     var displayName = i
     if displayName.startsWith("/tmp/"):
       displayName = displayName[5..^1]
