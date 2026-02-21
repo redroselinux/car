@@ -30,7 +30,6 @@ proc install_backend(file: string, displayName: string) =
 
   discard execShellCmd(
     "mkdir -p /etc/car/saves && " &
-    "rm -f /car && " &
     "tar --zstd -tf " & file &
     " | sed 's|^[^/]*/||' | grep -v '/$' > /etc/car/saves/" & displayName
   )
@@ -83,6 +82,12 @@ proc install*(packages: seq[string]) =
       displayName = displayName[displayName.rfind("/") + 1 .. ^1]
     displayName = stripSuffix(displayName, ".tar.zst")
     install_backend(i, displayName)
+    let car = readFile("/car")
+    for i in car.splitLines():
+      if i.startsWith("dep"):
+        let dep = i.split(" ")[1]
+        install(@[dep])
+  discard execShellCmd("rm -f /car")
 
   for i in remote_packages:
     var displayName = i
@@ -90,3 +95,9 @@ proc install*(packages: seq[string]) =
       displayName = displayName[5..^1]
     displayName = stripSuffix(displayName, ".tar.zst")
     install_backend(i, displayName)
+    let car = readFile("/car")
+    for i in car.splitLines():
+      if i.startsWith("dep"):
+        let dep = i.split(" ")[1]
+        install(@[dep])
+    discard execShellCmd("rm -f /car")
