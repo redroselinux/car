@@ -6,26 +6,29 @@ import operations/init
 import operations/listup
 import operations/install
 import operations/delete
+import operations/update
 
 var initMode = false
 
 proc isRoot() =
   if geteuid() != 0:
-    log_error("this operation must be run as root")
+    log_error "this operation must be run as root"
     quit()
 
 proc usage() =
-  log_info("Usage: car [options]")
-  log_info("Options: (F = flag)")
-  log_info("  -v, --version   show version information and exit")
-  log_info("  init            initialize car")
-  log_info("F --force         force initialization when already initialized")
-  log_info("  listup          update list of packages")
-  log_info("  install         install packages")
-  log_info("  delete          delete packages")
-  log_info("")
-  log_info("License: GPLv3-only")
-  log_info("Authors: Juraj Kollár <mostypc7@gmail.com>")
+  log_info "Usage: car [options]"
+  log_info "Options: (F = flag)"
+  log_info "  -v, --version   show version information and exit"
+  log_info "  init            initialize car"
+  log_info "F --force         force initialization when already initialized"
+  log_info "  listup          update list of packages"
+  log_info "  install         install packages"
+  log_info "  delete          delete packages"
+  log_info "  update          update packages"
+  log_info "  rmcache         clear cache (disabled in current version)"
+  log_info ""
+  log_info "License: GPLv3-only"
+  log_info "Authors: Juraj Kollár <mostypc7@gmail.com>"
 
 when isMainModule:
   var args = commandLineParams()
@@ -37,39 +40,47 @@ when isMainModule:
     while i < args.len:
       let arg = args[i]
       if arg == "-v" or arg == "--version" or arg == "version":
-        log_info("car version 3.0 (nim rewrite)")
+        log_info "car version 3.0 (nim rewrite)"
         quit()
       elif arg == "init":
         isRoot()
         if "--force" in args:
-          init(true)
+          init true
         else:
-          init(false)
+          init false
+      elif arg == "update":
+        isRoot()
+        update()
       elif arg == "listup":
         isRoot()
-        listup()
+        discard listup()
+        quit()
       elif arg in ["install", "get", "i"]:
         if args.len < 2:
-          log_error("missing package name")
+          log_error "missing package name"
           usage()
           quit()
         isRoot()
         let installArgs = args[(i+1)..^1]
-        install(installArgs)
+        install installArgs
         quit()
       elif arg == "delete":
         if args.len < 2:
-          log_error("missing package name")
+          log_error "missing package name"
           usage()
           quit()
         isRoot()
         let deleteArgs = args[(i+1)..^1]
-        delete(deleteArgs)
+        delete deleteArgs
         quit()
       elif arg in ["--force"]:
         continue
+      elif arg == "rmcache":
+        #log_info "clearing cache"
+        #discard execShellCmd "rm -rf /var/cache/car/*"
+        log_error "disabled"
       else:
-        log_error("unknown option: " & arg)
+        log_error "unknown option: " & arg
         usage()
         quit()
       inc(i)
