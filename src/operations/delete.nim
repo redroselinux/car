@@ -28,11 +28,12 @@ proc delete*(packages: seq[string]) =
           except OSError:
             log_error("permission denied or error deleting: " & target)
         else:
-          log_info("file already gone: " & target)
+          continue
 
       removeFile(savePath)
     else:
-      log_error("no tracking file found for: " & pkg)
+      log_warn("no tracking file found for: " & pkg)
+      return
 
     reproLines.keepItIf(not it.startsWith(pkg & "="))
 
