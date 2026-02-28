@@ -5,7 +5,7 @@ import init
 import times
 
 proc stripSuffix(s: string, suffix: string): string =
-  if s.endsWith(suffix):
+  if s.endsWith suffix:
     return s[0 .. s.len - suffix.len - 1]
   else:
     return s
@@ -13,12 +13,12 @@ proc stripSuffix(s: string, suffix: string): string =
 proc install_backend(file: string, displayName: string) =
   let start = getTime()
 
-  let exit = execShellCmd("tar -I zstd -xf " & file & " -C / --strip-components=1")
+  let exit = execShellCmd "tar -I zstd -xf " & file & " -C / --strip-components=1"
   if exit != 0:
     log_error("failed to unpack " & file)
     quit()
 
-  let manifest = readFile("/car")
+  let manifest = readFile "/car"
   var version = ""
   for line in manifest.split("\n"):
     if line.startsWith("version "):
@@ -51,12 +51,12 @@ proc install*(packages: seq[string]) =
 
   let downloadStart = getTime()
 
-  var packagelist = readFile("/etc/car/packagelist")
+  var packagelist = readFile "/etc/car/packagelist"
 
   for pkg in packages:
     if pkg == "[]":
       continue
-    if pkg in readFile("/etc/repro.car"):
+    if pkg in readFile "/etc/repro.car":
       log_info("package already installed: " & pkg)
       already_installed_packages.add(pkg)
       continue
@@ -64,7 +64,7 @@ proc install*(packages: seq[string]) =
     if fileExists("/tmp/" & pkg & ".tar.zst"):
       log_info("package cached: " & pkg)
       download_disable = true
-    if pkg.endsWith(".tar.zst"):
+    if pkg.endsWith ".tar.zst":
       local_packages.add(pkg)
       continue
     if not download_disable:
@@ -72,11 +72,11 @@ proc install*(packages: seq[string]) =
         if line.startswith(pkg):
           let download = line.split(" - ")[1]
           log_info("downloading " & download)
-          let exit = execShellCmd("curl -s -L -o /tmp/" & pkg & ".tar.zst " & download)
+          let exit = execShellCmd("curl -# -s -L -o /tmp/" & pkg & ".tar.zst " & download)
           if exit != 0:
             log_error("failed to download package " & pkg & " (exit " & $exit & ")")
             quit()
-    remote_packages.add("/tmp/" & pkg & ".tar.zst")
+    remote_packages.add "/tmp/" & pkg & ".tar.zst"
 
   let downloadTime = getTime() - downloadStart
   let downloadSeconds = float(downloadTime.inMilliseconds) / 1000.0
@@ -85,31 +85,31 @@ proc install*(packages: seq[string]) =
 
   for i in local_packages:
     if i in already_installed_packages:
-      log_info("package already installed: " & i)
+      log_info "package already installed: " & i
       continue
     var displayName = i
     if "/" in displayName:
       displayName = displayName[displayName.rfind("/") + 1 .. ^1]
     displayName = stripSuffix(displayName, ".tar.zst")
-    install_backend(i, displayName)
-    let car = readFile("/car")
+    install_backend i, displayName
+    let car = readFile "/car"
     for i in car.splitLines():
       if i.startsWith("dep"):
         let dep = i.split(" ")[1]
-        install(@[dep])
-  discard execShellCmd("rm -f /car")
+        install @[dep]
+  discard execShellCmd "rm -f /car"
 
   for i in remote_packages:
     if i in already_installed_packages:
-      log_info("package already installed: " & i)
+      log_info "package already installed: " & i
       continue
     var displayName = i
     if displayName.startsWith("/tmp/"):
       displayName = displayName[5..^1]
     displayName = stripSuffix(displayName, ".tar.zst")
-    install_backend(i, displayName)
-    let car = readFile("/car")
+    install_backend i, displayName
+    let car = readFile "/car"
     for i in car.splitLines():
       if i.startsWith("dep"):
-        install(@[i.split(" ")[1]])
-    discard execShellCmd("rm -f /car")
+        install @[i.split(" ")[1]]
+    discard execShellCmd "rm -f /car"
