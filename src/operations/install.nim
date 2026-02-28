@@ -11,73 +11,104 @@ proc stripSuffix(s: string, suffix: string): string =
     return s
 
 proc install_backend(file: string, displayName: string) =
-  if file == "" or not fileExists(file): return
-
   let start = getTime()
-
-  let cleanName = displayName.stripSuffix(".tar.zst").stripSuffix(".tar")
 
   let exit = execShellCmd("tar -I zstd -xf " & file & " -C / --strip-components=1")
   if exit != 0:
     log_error("failed to unpack " & file)
-    return
+    quit()
 
-  var version = "unknown"
-  if fileExists("/car"):
-    try:
-      for line in readFile("/car").splitLines():
-        if line.startsWith("version "):
-          version = line.split(" ")[1]
-          break
-    except IOError: discard
+  let manifest = readFile("/car")
+  var version = ""
+  for line in manifest.split("\n"):
+    if line.startsWith("version "):
+      version = line.split(" ")[1]
 
   let packages_config = open("/etc/repro.car", fmAppend)
-  packages_config.writeLine(cleanName & "=" & version)
+  packages_config.writeLine(displayName & "=" & version)
   packages_config.close()
 
-  discard execShellCmd("mkdir -p /etc/car/saves")
   discard execShellCmd(
-    "tar --zstd -tf " & file & " | sed 's|^[^/]*/||' | grep -v '/$' | grep -v '^car$' | grep -v '^$' | sed 's|^|/|' > /etc/car/saves/" & cleanName
+    "mkdir -p /etc/car/saves && " &
+    "tar --zstd -tf " & file &
+    " | sed 's|^[^/]*/||' | grep -v '/$' > /etc/car/saves/" & displayName
   )
 
   let elapsed = getTime() - start
-  log_ok("installed " & cleanName & " (" & version & ") successfully in " & $elapsed.inMilliseconds & " ms")
+  log_ok(
+    "installed " & displayName & " (" & version & ") successfully in " & $elapsed.inMilliseconds & " ms"
+  )
 
 proc install*(packages: seq[string]) =
   if not isInited():
     log_error("car is not initialized")
+    log_error("run 'car init' to initialize car")
     quit()
 
   var local_packages: seq[string]
   var remote_packages: seq[string]
+  var already_installed_packages: seq[string]
+
+  let downloadStart = getTime()
+
+  var packagelist = readFile("/etc/car/packagelist")
 
   for pkg in packages:
-    if pkg == "" or pkg == "[]": continue
+    if pkg in readFile("/etc/repro.car"):
+      log_info("package already installed: " & pkg)
+      already_installed_packages.add(pkg)
+      continue
+    var download_disable = false
+    if fileExists("/tmp/" & pkg & ".tar.zst"):
+      log_info("package cached: " & pkg)
+      download_disable = true
     if pkg.endsWith(".tar.zst"):
       local_packages.add(pkg)
-    else:
-      remote_packages.add("/tmp/" & pkg & ".tar.zst")
+      continue
+    if not download_disable:
+      for line in packagelist.split("\n"):
+        if line.startswith(pkg):
+          let download = line.split(" - ")[1]
+          log_info("downloading " & download)
+          let exit = execShellCmd("curl -s -L -o /tmp/" & pkg & ".tar.zst " & download)
+          if exit != 0:
+            log_error("failed to download package " & pkg & " (exit " & $exit & ")")
+            quit()
+    remote_packages.add("/tmp/" & pkg & ".tar.zst")
+
+  let downloadTime = getTime() - downloadStart
+  let downloadSeconds = float(downloadTime.inMilliseconds) / 1000.0
+  if downloadSeconds != float(0):
+    log_ok("downloads took " & $downloadSeconds & " seconds")
 
   for i in local_packages:
-    let displayName = i.splitFile.name.stripSuffix(".tar.zst")
+    if i in already_installed_packages:
+      log_info("package already installed: " & i)
+      continue
+    var displayName = i
+    if "/" in displayName:
+      displayName = displayName[displayName.rfind("/") + 1 .. ^1]
+    displayName = stripSuffix(displayName, ".tar.zst")
     install_backend(i, displayName)
-
-    if fileExists("/car"):
-      let carLines = readFile("/car").splitLines()
-      for line in carLines:
-        if line.startsWith("dep "):
-          install(@[line.split(" ")[1]])
-      removeFile("/car")
+    let car = readFile("/car")
+    for i in car.splitLines():
+      if i.startsWith("dep"):
+        let dep = i.split(" ")[1]
+        install(@[dep])
+  discard execShellCmd("rm -f /car")
 
   for i in remote_packages:
-    if not fileExists(i): continue
-    let displayName = i.splitFile.name.stripSuffix(".tar.zst")
-
+    if i in already_installed_packages:
+      log_info("package already installed: " & i)
+      continue
+    var displayName = i
+    if displayName.startsWith("/tmp/"):
+      displayName = displayName[5..^1]
+    displayName = stripSuffix(displayName, ".tar.zst")
     install_backend(i, displayName)
-
-    if fileExists("/car"):
-      let carLines = readFile("/car").splitLines()
-      for line in carLines:
-        if line.startsWith("dep "):
-          install(@[line.split(" ")[1]])
-      removeFile("/car")
+    let car = readFile("/car")
+    for i in car.splitLines():
+      if i.startsWith("dep"):
+        let dep = i.split(" ")[1]
+        install(@[dep])
+    discard execShellCmd("rm -f /car")
