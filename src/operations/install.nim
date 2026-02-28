@@ -54,6 +54,8 @@ proc install*(packages: seq[string]) =
   var packagelist = readFile("/etc/car/packagelist")
 
   for pkg in packages:
+    if pkg == "[]":
+      continue
     if pkg in readFile("/etc/repro.car"):
       log_info("package already installed: " & pkg)
       already_installed_packages.add(pkg)
@@ -109,6 +111,5 @@ proc install*(packages: seq[string]) =
     let car = readFile("/car")
     for i in car.splitLines():
       if i.startsWith("dep"):
-        let dep = i.split(" ")[1]
-        install(@[dep])
+        install(@[i.split(" ")[1]])
     discard execShellCmd("rm -f /car")
