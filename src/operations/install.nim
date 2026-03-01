@@ -61,7 +61,7 @@ proc install*(packages: seq[string]) =
       already_installed_packages.add(pkg)
       continue
     var download_disable = false
-    if fileExists("/var/cache/car" & pkg & ".tar.zst"):
+    if fileExists("/tmp" & pkg & ".tar.zst"):
       log_info("package cached: " & pkg)
       download_disable = true
     if pkg.endsWith ".tar.zst":
@@ -72,11 +72,11 @@ proc install*(packages: seq[string]) =
         if line.startswith(pkg):
           let download = line.split(" - ")[1]
           log_info("downloading " & download)
-          let exit = execShellCmd("curl -# -s -L -o /var/cache/car" & pkg & ".tar.zst " & download)
+          let exit = execShellCmd("curl -# -s -L -o /tmp/" & pkg & ".tar.zst " & download)
           if exit != 0:
             log_error("failed to download package " & pkg & " (exit " & $exit & ")")
             quit()
-    remote_packages.add "/var/cache/car" & pkg & ".tar.zst"
+    remote_packages.add "/tmp/" & pkg & ".tar.zst"
 
   let downloadTime = getTime() - downloadStart
   let downloadSeconds = float(downloadTime.inMilliseconds) / 1000.0
@@ -104,7 +104,7 @@ proc install*(packages: seq[string]) =
       log_info "package already installed: " & i
       continue
     var displayName = i
-    if displayName.startsWith("/var/cache/car"):
+    if displayName.startsWith("/tmp"):
       displayName = displayName[5..^1]
     displayName = stripSuffix(displayName, ".tar.zst")
     install_backend i, displayName
