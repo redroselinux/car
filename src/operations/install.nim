@@ -39,7 +39,7 @@ proc install_backend(file: string, displayName: string) =
     "installed " & displayName & " (" & version & ") successfully in " & $elapsed.inMilliseconds & " ms"
   )
 
-proc install*(packages: seq[string]) =
+proc install*(packages: seq[string], force=false) =
   if not isInited():
     log_error("car is not initialized")
     log_error("run 'car init' to initialize car")
@@ -57,13 +57,15 @@ proc install*(packages: seq[string]) =
     if pkg == "[]":
       continue
     if pkg in readFile "/etc/repro.car":
-      log_info("package already installed: " & pkg)
-      already_installed_packages.add(pkg)
-      continue
+      if not force:
+        log_info("package already installed: " & pkg)
+        already_installed_packages.add(pkg)
+        continue
     var download_disable = false
-    if fileExists("/tmp" & pkg & ".tar.zst"):
-      log_info("package cached: " & pkg)
-      download_disable = true
+    if fileExists("/tmp/" & pkg & ".tar.zst"):
+      if not force:
+        log_info("package cached: " & pkg)
+        download_disable = true
     if pkg.endsWith ".tar.zst":
       local_packages.add(pkg)
       continue
@@ -104,7 +106,7 @@ proc install*(packages: seq[string]) =
       log_info "package already installed: " & i
       continue
     var displayName = i
-    if displayName.startsWith("/tmp"):
+    if displayName.startsWith("/tmp/"):
       displayName = displayName[5..^1]
     displayName = stripSuffix(displayName, ".tar.zst")
     install_backend i, displayName
