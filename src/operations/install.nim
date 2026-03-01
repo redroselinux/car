@@ -74,7 +74,7 @@ proc install*(packages: seq[string], force=false) =
         if line.startswith(pkg):
           let download = line.split(" - ")[1]
           log_info("downloading " & download)
-          let exit = execShellCmd("curl -# -s -L -o /tmp/" & pkg & ".tar.zst " & download)
+          let exit = execShellCmd("curl -# -L -o /tmp/" & pkg & ".tar.zst " & download)
           if exit != 0:
             log_error("failed to download package " & pkg & " (exit " & $exit & ")")
             quit()
