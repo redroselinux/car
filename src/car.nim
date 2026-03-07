@@ -53,7 +53,7 @@ when isMainModule:
         update()
       elif arg == "listup":
         isRoot()
-        discard listup()
+        listup()
         quit()
       elif arg in ["install", "get", "i"]:
         if args.len < 2:
