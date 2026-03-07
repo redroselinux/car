@@ -40,7 +40,13 @@ when isMainModule:
     while i < args.len:
       let arg = args[i]
       if arg == "-v" or arg == "--version" or arg == "version":
-        log_info "car version 3.0 (nim rewrite)"
+        log_info(
+          "car version 3.7.2 (nim rewrite of c rewrite of origin python version) (" &
+          CompileDate & ", " & CompileTime & ") [Nim " &
+          NimVersion & "] on " & hostOS
+        )
+        log_info "author: mostypc123 <mostypc7@gmail.com>"
+        log_info "source: https://github.com/redroselinux/car"
         quit()
       elif arg == "init":
         isRoot()
