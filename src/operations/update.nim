@@ -5,7 +5,7 @@ import install
 import strutils
 
 proc update*() =
-  discard listup()
+  listup()
   log_info "reading lists"
 
   let packagelist = readFile("/etc/car/packagelist")
