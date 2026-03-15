@@ -23,13 +23,15 @@ proc install_backend(file: string, displayName: string) =
   for line in manifest.split("\n"):
     if line.startsWith("version "):
       version = line.split(" ")[1]
+    elif line.startsWith("exec"):
+      if execShellCmd(line) != 0:
+        log_warn("a script failed to execute")
 
   let packages_config = open("/etc/repro.car", fmAppend)
   packages_config.writeLine(displayName & "=" & version)
   packages_config.close()
 
   discard execShellCmd(
-    "mkdir -p /etc/car/saves && " &
     "tar --zstd -tf " & file &
     " | sed 's|^[^/]*/||' | grep -v '/$' > /etc/car/saves/" & displayName
   )
