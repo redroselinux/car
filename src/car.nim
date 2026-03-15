@@ -41,7 +41,7 @@ when isMainModule:
       let arg = args[i]
       if arg == "-v" or arg == "--version" or arg == "version":
         log_info(
-          "car version 3.7.2 (nim rewrite of c rewrite of origin python version) (" &
+          "car version 3.8 (nim rewrite of c rewrite of origin python version) (" &
           CompileDate & ", " & CompileTime & ") [Nim " &
           NimVersion & "] on " & hostOS
         )
