@@ -32,8 +32,8 @@ proc install_backend(file: string, displayName: string) =
   packages_config.close()
 
   discard execShellCmd(
-    "tar --zstd -tf " & file &
-    " | sed 's|^[^/]*/||' | grep -v '/$' > /etc/car/saves/" & displayName
+    "tar --zstd -tf " & file.strip("$(") &
+    " | sed 's|^[^/]*/||' | grep -v '/$' > /etc/car/saves/" & displayName.strip("$(")
   )
 
   let elapsed = getTime() - start
@@ -58,7 +58,7 @@ proc install*(packages: seq[string], force=false) =
   for pkg in packages:
     if pkg == "[]":
       continue
-    if pkg in readFile "/etc/repro.car":
+    if pkg & "=" in readFile "/etc/repro.car":
       if not force:
         log_info("package already installed: " & pkg)
         already_installed_packages.add(pkg)
@@ -73,18 +73,20 @@ proc install*(packages: seq[string], force=false) =
       continue
     if not download_disable:
       for line in packagelist.split("\n"):
-        if line.startswith(pkg):
+        if line.startswith(pkg & " - "):
           let download = line.split(" - ")[1]
           log_info("downloading " & download)
           let exit = execShellCmd("curl -# -L -o /tmp/" & pkg & ".tar.zst " & download)
           if exit != 0:
             log_error("failed to download package " & pkg & " (exit " & $exit & ")")
             quit()
-    remote_packages.add "/tmp/" & pkg & ".tar.zst"
+          remote_packages.add "/tmp/" & pkg & ".tar.zst"
+          continue
+      log_error("package " & pkg & " not found - skipping")
 
   let downloadTime = getTime() - downloadStart
   let downloadSeconds = float(downloadTime.inMilliseconds) / 1000.0
-  if downloadSeconds != float(0):
+  if downloadSeconds > 0.05:
     log_ok("downloads took " & $downloadSeconds & " seconds")
 
   for i in local_packages:
