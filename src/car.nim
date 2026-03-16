@@ -25,7 +25,6 @@ proc usage() =
   log_info "  install         install packages"
   log_info "  delete          delete packages"
   log_info "  update          update packages"
-  log_info "  rmcache         clear cache (disabled in current version)"
   log_info ""
   log_info "License: GPLv3-only"
   log_info "Authors: Juraj Kollár <mostypc7@gmail.com>"
@@ -41,7 +40,7 @@ when isMainModule:
       let arg = args[i]
       if arg == "-v" or arg == "--version" or arg == "version":
         log_info(
-          "car version 3.8 (nim rewrite of c rewrite of origin python version) (" &
+          "car version 3.9 (nim rewrite of c rewrite of origin python version) (" &
           CompileDate & ", " & CompileTime & ") [Nim " &
           NimVersion & "] on " & hostOS
         )
@@ -81,10 +80,6 @@ when isMainModule:
         quit()
       elif arg in ["--force"]:
         continue
-      elif arg == "rmcache":
-        #log_info "clearing cache"
-        #discard execShellCmd "rm -rf /var/cache/car/*"
-        log_error "disabled"
       else:
         log_error "unknown option: " & arg
         usage()
