@@ -32,8 +32,8 @@ proc install_backend(file: string, displayName: string) =
   packages_config.close()
 
   discard execShellCmd(
-    "tar --zstd -tf " & file.strip("$(") &
-    " | sed 's|^[^/]*/||' | grep -v '/$' > /etc/car/saves/" & displayName.strip("$(")
+    "tar --zstd -tf " & file.replace("$(", "") &
+    " | sed 's|^[^/]*/||' | grep -v '/$' > /etc/car/saves/" & displayName.replace("$(", "")
   )
 
   let elapsed = getTime() - start
