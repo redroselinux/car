@@ -1,6 +1,7 @@
 import os
 import color
 import posix
+import strutils
 
 import operations/init
 import operations/listup
@@ -9,6 +10,7 @@ import operations/delete
 import operations/update
 
 var initMode = false
+var searchMode = false
 
 proc isRoot() =
   if geteuid() != 0:
@@ -25,6 +27,7 @@ proc usage() =
   log_info "  install         install packages"
   log_info "  delete          delete packages"
   log_info "  update          update packages"
+  log_info "  search          search for packages"
   log_info ""
   log_info "License: GPLv3-only"
   log_info "Authors: Juraj Kollár <mostypc7@gmail.com>"
@@ -38,6 +41,13 @@ when isMainModule:
     var i = 0
     while i < args.len:
       let arg = args[i]
+      if searchMode:
+        if isInited():
+          discard execShellCmd("cat /etc/car/packagelist | grep '" & arg.replace("$(", "") & " - '")
+          quit()
+        else:
+          log_error "car is not inited. did you run 'car init'?"
+
       if arg == "-v" or arg == "--version" or arg == "version":
         log_info(
           "car version 3.9 (nim rewrite of c rewrite of origin python version) (" &
@@ -80,6 +90,8 @@ when isMainModule:
         quit()
       elif arg in ["--force"]:
         continue
+      elif arg == "search":
+        searchMode = true
       else:
         log_error "unknown option: " & arg
         usage()
