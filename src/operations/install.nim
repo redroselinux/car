@@ -71,18 +71,23 @@ proc install*(packages: seq[string], force=false) =
     if pkg.endsWith ".tar.zst":
       local_packages.add(pkg)
       continue
-    if not download_disable:
-      for line in packagelist.split("\n"):
-        if line.startswith(pkg & " - "):
-          let download = line.split(" - ")[1]
-          log_info("downloading " & download)
-          let exit = execShellCmd("curl -# -L -o /tmp/" & pkg & ".tar.zst " & download)
-          if exit != 0:
-            log_error("failed to download package " & pkg & " (exit " & $exit & ")")
-            quit()
-          remote_packages.add "/tmp/" & pkg & ".tar.zst"
-          continue
+    var found = false
+
+    for line in packagelist.split("\n"):
+      if line.startswith(pkg & " - "):
+        found = true
+        let download = line.split(" - ")[1]
+        log_info("downloading " & download)
+        let exit = execShellCmd("curl -# -L -o /tmp/" & pkg & ".tar.zst " & download)
+        if exit != 0:
+          log_error("failed to download package " & pkg & " (exit " & $exit & ")")
+          quit()
+        break
+
+    if not found:
       log_error("package " & pkg & " not found - skipping")
+    else:
+      remote_packages.add "/tmp/" & pkg & ".tar.zst"
 
   let downloadTime = getTime() - downloadStart
   let downloadSeconds = float(downloadTime.inMilliseconds) / 1000.0
