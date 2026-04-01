@@ -11,41 +11,57 @@ proc stripSuffix(s: string, suffix: string): string =
     return s
 
 proc install_backend(file: string, displayName: string) =
+  # 0 - nothing failed
+  # 1 - something failed
+  # if everything fails, the program quits
+  var fail_level = 0
+
   let start = getTime()
 
-  let exit = execShellCmd "tar -I zstd -xf " & file & " -C / --strip-components=1"
-  if exit != 0:
+  if execShellCmd("tar -I zstd -xf " & file & " -C / --strip-components=1") != 0:
     log_error("failed to unpack " & file)
-    quit()
+    quit(1)
 
   let manifest = readFile "/car"
-  var version = ""
+  var version = "NONE"
   for line in manifest.split("\n"):
     if line.startsWith("version "):
       version = line.split(" ")[1]
     elif line.startsWith("exec"):
       if execShellCmd(line) != 0:
         log_warn("a script failed to execute")
+        fail_level = 1
 
   let packages_config = open("/etc/repro.car", fmAppend)
   packages_config.writeLine(displayName & "=" & version)
   packages_config.close()
 
-  discard execShellCmd(
+  let exit = execShellCmd(
     "tar --zstd -tf " & file.replace("$(", "") &
     " | sed 's|^[^/]*/||' | grep -v '/$' > /etc/car/saves/" & displayName.replace("$(", "")
   )
+  if exit != 0:
+    log_warn("failed to save files to delete " & displayName)
+    fail_level = 1
 
-  let elapsed = getTime() - start
-  log_ok(
-    "installed " & displayName & " (" & version & ") successfully in " & $elapsed.inMilliseconds & " ms"
-  )
+  var elapsed = getTime() - start
+  var fail_level_word = "succesfully"
+  if fail_level == 1:
+    fail_level_word = "\e[1m\e[93mpartially succesfully\e[0m"
+  if version == "NONE" or version == "":
+    log_ok(
+      "installed " & displayName & " " & fail_level_word & " in " & $elapsed.inMilliseconds & " ms"
+    )
+  else:
+    log_ok(
+      "installed " & displayName & " (" & version & ") " & fail_level_word & " in " & $elapsed.inMilliseconds & " ms"
+    )
 
 proc install*(packages: seq[string], force=false) =
   if not isInited():
     log_error("car is not initialized")
     log_error("run 'car init' to initialize car")
-    quit()
+    quit(2)
 
   var local_packages: seq[string]
   var remote_packages: seq[string]
@@ -81,7 +97,7 @@ proc install*(packages: seq[string], force=false) =
         let exit = execShellCmd("curl -# -L -o /tmp/" & pkg & ".tar.zst " & download)
         if exit != 0:
           log_error("failed to download package " & pkg & " (exit " & $exit & ")")
-          quit()
+          quit(1)
         break
 
     if not found:
