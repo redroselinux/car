@@ -22,4 +22,3 @@ proc listup*() =
       log_error("failed to update package list")
       quit()
   log_ok("package list updated")
-  quit() # i have no clue why didnt this quit by itself
