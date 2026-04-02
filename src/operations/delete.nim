@@ -15,7 +15,7 @@ proc delete*(packages: seq[string]) =
 
         for line in savedFiles:
           let target = line.strip()
-
+          # when running from like ./car this would remove the current build sooo
           if target == "" or target == "car":
             continue
 
