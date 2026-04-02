@@ -3,6 +3,7 @@ import ../color
 import listup
 import install
 import strutils
+import sequtils
 
 proc update*() =
   listup()
@@ -38,7 +39,7 @@ proc update*() =
 
   if updatable.len == 0:
     log_ok "system is up to date"
-    return
+    quit(0)
 
   log_info("updating " & $updatable.len & " packages:")
   echo("        " & updatable.join(", "))
@@ -49,5 +50,12 @@ proc update*() =
   else:
     quit(130)
 
-  for pkg in updatable:
-    install(@[pkg], force=true)
+  var reproLines = readFile("/etc/repro.car").splitLines()
+  for i in reproLines:
+    if i.split("=")[0] in updatable:
+      reproLines.keepItIf(not it.startsWith(i & "="))
+
+  install(updatable, force=true)
+
+  log_done("finished system upgrade")
+  log_warn("you should reboot your system right now")
