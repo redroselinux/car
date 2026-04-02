@@ -51,9 +51,8 @@ proc update*() =
     quit(130)
 
   var reproLines = readFile("/etc/repro.car").splitLines()
-  for i in reproLines:
-    if i.split("=")[0] in updatable:
-      reproLines.keepItIf(not it.startsWith(i & "="))
+  reproLines.keepItIf(it.split("=")[0] notin updatable)
+  writeFile("/etc/repro.car", reproLines.join("\n"))
 
   install(updatable, force=true)
 
