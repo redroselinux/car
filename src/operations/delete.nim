@@ -15,7 +15,7 @@ proc delete*(packages: seq[string]) =
 
         for line in savedFiles:
           let target = line.strip()
-
+          # when running from like ./car this would remove the current build sooo
           if target == "" or target == "car":
             continue
 
@@ -33,8 +33,9 @@ proc delete*(packages: seq[string]) =
         return
 
       reproLines.keepItIf(not it.startsWith(pkg & "="))
+      log_ok("deleted " & pkg)
 
   writeFile("/etc/repro.car", reproLines.join("\n"))
 
   let elapsed = getTime() - start
-  log_ok("process complete in " & $elapsed.inMilliseconds & " ms")
+  log_done("complete in " & $elapsed.inMilliseconds & " ms")

@@ -8,6 +8,7 @@ import operations/listup
 import operations/install
 import operations/delete
 import operations/update
+import operations/rarebuild
 
 var initMode = false
 var searchMode = false
@@ -18,16 +19,18 @@ proc isRoot() =
     quit()
 
 proc usage() =
-  log_info "Usage: car [options]"
-  log_info "Options: (F = flag)"
+  log_info "Usage: car [command] [options] [flags]"
+  log_info "You can mix commands: sudo car listup install example"
+  log_info "Options:"
   log_info "  -v, --version   show version information and exit"
-  log_info "  init            initialize car"
-  log_info "F --force         force initialization when already initialized"
+  log_info "  init |Flags|    initialize car"
+  log_info "       --force    force initialization when already initialized"
   log_info "  listup          update list of packages"
   log_info "  install         install packages"
   log_info "  delete          delete packages"
-  log_info "  update          update packages"
+  log_info "  update          run listup and perform a system upgrade"
   log_info "  search          search for packages"
+  log_info "  cleanbuild      use rare to compile a package in docker"
   log_info ""
   log_info "License: GPLv3-only"
   log_info "Authors: Juraj Kollár <mostypc7@gmail.com>"
@@ -50,7 +53,7 @@ when isMainModule:
 
       if arg == "-v" or arg == "--version" or arg == "version":
         log_info(
-          "car version 3.9 (nim rewrite of c rewrite of origin python version) (" &
+          "car version 3.10 (nim rewrite of c rewrite of origin python version) (" &
           CompileDate & ", " & CompileTime & ") [Nim " &
           NimVersion & "] on " & hostOS
         )
@@ -78,6 +81,15 @@ when isMainModule:
         isRoot()
         let installArgs = args[(i+1)..^1]
         install installArgs
+        quit()
+      elif arg == "cleanbuild":
+        if args.len < 2:
+          log_error "missing package name"
+          usage()
+          quit()
+        isRoot()
+        let installArgs = args[(i+1)..^1]
+        rareBuild installArgs
         quit()
       elif arg == "delete":
         if args.len < 2:

@@ -31,7 +31,7 @@ proc init*(force: bool) =
 
   if not force:
     if isInited():
-      log_error("already initialized. to reinit:")
+      log_error("already initialized. to reinit (not recommended):")
       log_error("> car init --force")
       quit()
     createConfig()
