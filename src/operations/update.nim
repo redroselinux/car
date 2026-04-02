@@ -11,8 +11,6 @@ proc update*() =
   let packagelist = readFile("/etc/car/packagelist")
   let repro = readFile("/etc/repro.car")
 
-  log_info "populating lists"
-
   var installed = initTable[string,string]()
   for line in repro.splitLines():
     if line.contains("="):
@@ -43,7 +41,13 @@ proc update*() =
     return
 
   log_info("updating " & $updatable.len & " packages:")
-  log_info(updatable.join(", "))
+  echo("        " & updatable.join(", "))
+  stdout.write "      continue? [Y/n] "
+  let confirm = readLine(stdin).toLowerAscii()
+  if confirm.startsWith("y") or confirm == "":
+    discard
+  else:
+    quit(130)
 
   for pkg in updatable:
     install(@[pkg], force=true)
