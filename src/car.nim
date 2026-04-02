@@ -20,6 +20,7 @@ proc isRoot() =
 
 proc usage() =
   log_info "Usage: car [command] [options] [flags]"
+  log_info "You can mix commands: sudo car listup install example"
   log_info "Options:"
   log_info "  -v, --version   show version information and exit"
   log_info "  init |Flags|    initialize car"
