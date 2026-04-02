@@ -32,5 +32,10 @@ proc rareBuild*(packages: seq[string]) =
     if execShellCmd("./rare build " & package) != 0:
       log_error("failed to compile " & package)
       quit(1)
+    copyFile("/tmp/rarebuild/" & package & ".tar.zst", "/tmp/" & package & ".tar.zst")
     log_ok("compiled " & package)
-  log_done("compiled all")
+    setCurrentDir("/tmp")
+  log_done("compiled all\n")
+  log_info("results are located in: ")
+  for i in packages:
+    echo "      /tmp/" & i & ".tar.zst"
