@@ -1,40 +1,24 @@
 import os
 import strutils
-
-import listup
 import ../color
 
-proc isInited*(): bool =
-  dirExists("/etc/car")
+proc listup*() =
+  # TODO: custom repos
 
-proc createConfig() =
-  createDir("/etc/car")
-  createDir("/etc/car/saves")
-  writeFile("/etc/repro.car", "")
-  log_pick("main mirror (pick one close to you)")
-  let mirrors = ["https://github.com/redroselinux/car3-pkgs/raw/refs/heads/main/README"]
-  var counter = 1
-  for i in mirrors:
-    log_option("[" & $counter & "]: " & i)
-    counter += 1
-  stdout.write "> "
-  var mirror = readLine(stdin)
-  if mirror == "":
-    mirror = "1"
-    log_warn("using default mirror")
-  writeFile("/etc/car/mirror", mirrors[parseInt(mirror) - 1])
-  writeFile("/etc/car/packagelist", "")
-  listup()
-
-proc init*(force: bool) =
-  log_info("creating car configs")
-
-  if not force:
-    if isInited():
-      log_error("already initialized. to reinit (not recommended):")
-      log_error("> car init --force")
+  log_info("updating package list")
+  var mirror = ""
+  try:
+    mirror = readFile("/etc/car/mirror").strip()
+  except:
+    log_error("no mirror is set. did you run 'car init'?")
+    quit()
+  if execShellCmd("curl -s -L -o /etc/car/packagelist " & mirror) != 0:
+    log_error("failed to update package list")
+    quit()
+  if execShellCmd("cat /etc/car_propiertary.lock 2>/dev/null") == 0:
+    # propiertary enabled
+    log_info("updating propriertary repo")
+    if execShellCmd("curl -s -L https://github.com/redroselinux/car-propiertary-repo/raw/refs/heads/main/README >> /etc/car/packagelist") != 0:
+      log_error("failed to update package list")
       quit()
-    createConfig()
-  else:
-    log_warn("forced re-init")
-    createConfig()
+  log_ok("package list updated")
