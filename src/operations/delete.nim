@@ -14,9 +14,9 @@ proc delete*(packages: seq[string]) =
         let savedFiles = readFile("/etc/car/saves/" & pkg).splitLines()
 
         for line in savedFiles:
-          let target = line.strip()
+          let target = "/" & line.strip()
           # when running from like ./car this would remove the current build sooo
-          if target == "" or target == "car":
+          if target == "/" or target == "/car":
             continue
 
           if fileExists(target):
@@ -25,7 +25,7 @@ proc delete*(packages: seq[string]) =
             except OSError:
               log_error("permission denied or error deleting: " & target)
           else:
-            continue
+            log_warn("file missing: " & target)
 
         removeFile("/etc/car/saves/" & pkg)
       else:
@@ -34,6 +34,9 @@ proc delete*(packages: seq[string]) =
 
       reproLines.keepItIf(not it.startsWith(pkg & "="))
       log_ok("deleted " & pkg)
+    else:
+      log_error("package not found: " & pkg & " - skipping")
+      continue
 
   writeFile("/etc/repro.car", reproLines.join("\n"))
 
