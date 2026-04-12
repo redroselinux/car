@@ -4,6 +4,9 @@ import ../color
 import init
 import times
 
+const packagelist = readFile("/etc/car/packagelist")
+var repro_car = readFile("/etc/repro.car")
+
 proc stripSuffix(s: string, suffix: string): string =
   if s.endsWith suffix:
     return s[0 .. s.len - suffix.len - 1]
@@ -18,7 +21,10 @@ proc install_backend(file: string, displayName: string) =
 
   let start = getTime()
 
-  if execShellCmd("tar -I zstd -xf " & file & " -C / --strip-components=1") != 0:
+  if execShellCmd(
+    "tar -I \"zstd -T0\" -xvf " & file & " -C / --strip-components=1 " &
+    "| sed 's|^[^/]*/||' | grep -v '/$' > /etc/car/saves/" & displayName
+  ) != 0:
     log_error("failed to unpack " & file)
     quit(1)
 
@@ -35,14 +41,7 @@ proc install_backend(file: string, displayName: string) =
   let packages_config = open("/etc/repro.car", fmAppend)
   packages_config.writeLine(displayName & "=" & version)
   packages_config.close()
-
-  let exit = execShellCmd(
-    "tar --zstd -tf " & file.replace("$(", "") &
-    " | sed 's|^[^/]*/||' | grep -v '/$' > /etc/car/saves/" & displayName.replace("$(", "")
-  )
-  if exit != 0:
-    log_warn("failed to save files to delete " & displayName)
-    fail_level = 1
+  repro_car = readFile("/etc/repro.car") # reload
 
   var elapsed = getTime() - start
   var fail_level_word = "succesfully"
@@ -137,15 +136,13 @@ proc install*(packages: seq[string], force=false) =
 
   let downloadStart = getTime()
 
-  var packagelist = readFile "/etc/car/packagelist"
-
   for pkg in packages:
     if pkg.startsWith("legacy::"):
       legacy_install(pkg.split("::")[1])
       continue
     if pkg == "[]":
       continue
-    if pkg & "=" in readFile "/etc/repro.car":
+    if pkg & "=" in repro_car:
       if not force:
         log_info("package already installed: " & pkg)
         already_installed_packages.add(pkg)
@@ -162,15 +159,16 @@ proc install*(packages: seq[string], force=false) =
 
     if not download_disable:
       for line in packagelist.split("\n"):
-        if line.startswith(pkg & " - "):
-          found = true
-          let download = line.split(" - ")[1]
-          log_info("downloading " & download)
-          let exit = execShellCmd("curl -# -L -o /var/cache/" & pkg & ".tar.zst " & download)
-          if exit != 0:
-            log_error("failed to download package " & pkg & " (exit " & $exit & ")")
-            quit(1)
-          break
+        if line.contains(" - "):
+          if line.startswith(pkg & " - "):
+            found = true
+            let download = line.split(" - ")[1]
+            log_info("downloading " & download)
+            let exit = execShellCmd("curl -# -L -o /var/cache/" & pkg & ".tar.zst " & download)
+            if exit != 0:
+              log_error("failed to download package " & pkg & " (exit " & $exit & ")")
+              quit(1)
+            break
     else:
       found = true
 
@@ -184,6 +182,8 @@ proc install*(packages: seq[string], force=false) =
   if downloadSeconds > 0.05:
     log_ok("downloads took " & $downloadSeconds & " seconds")
 
+  var deps: seq[string]
+
   for i in local_packages:
     if i in already_installed_packages:
       log_info "package already installed: " & i
@@ -196,9 +196,8 @@ proc install*(packages: seq[string], force=false) =
     let car = readFile "/car"
     for i in car.splitLines():
       if i.startsWith("dep"):
-        let dep = i.split(" ")[1]
-        install @[dep]
-  discard execShellCmd "rm -f /car"
+        deps.add(i.split(" ")[1])
+  removeFile("/car")
 
   for i in remote_packages:
     if i in already_installed_packages:
@@ -212,5 +211,7 @@ proc install*(packages: seq[string], force=false) =
     let car = readFile "/car"
     for i in car.splitLines():
       if i.startsWith("dep"):
-        install @[i.split(" ")[1]]
-    discard execShellCmd "rm -f /car"
+        deps.add(i.split(" ")[1])
+    removeFile("/car")
+
+    install deps
