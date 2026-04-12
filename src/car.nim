@@ -10,6 +10,8 @@ import operations/delete
 import operations/update
 import operations/rarebuild
 
+{.passC: "-O3 -flto -funroll-loops -fstrict-aliasing -fomit-frame-pointer -ftree-vectorize -fprefetch-loop-arrays -floop-interchange -floop-block -floop-unroll-and-jam -ffast-math -fassociative-math -fno-trapping-math".}
+
 var initMode = false
 var searchMode = false
 
