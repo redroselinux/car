@@ -4,7 +4,7 @@ import ../color
 import init
 import times
 
-const packagelist = readFile("/etc/car/packagelist")
+let packagelist = readFile("/etc/car/packagelist")
 var repro_car = readFile("/etc/repro.car")
 
 proc stripSuffix(s: string, suffix: string): string =
@@ -159,16 +159,15 @@ proc install*(packages: seq[string], force=false) =
 
     if not download_disable:
       for line in packagelist.split("\n"):
-        if line.contains(" - "):
-          if line.startswith(pkg & " - "):
-            found = true
-            let download = line.split(" - ")[1]
-            log_info("downloading " & download)
-            let exit = execShellCmd("curl -# -L -o /var/cache/" & pkg & ".tar.zst " & download)
-            if exit != 0:
-              log_error("failed to download package " & pkg & " (exit " & $exit & ")")
-              quit(1)
-            break
+        if line.startswith(pkg & " - "):
+          found = true
+          let download = line.split(" - ")[1]
+          log_info("downloading " & download)
+          let exit = execShellCmd("curl -# -L -o /var/cache/" & pkg & ".tar.zst " & download)
+          if exit != 0:
+            log_error("failed to download package " & pkg & " (exit " & $exit & ")")
+            quit(1)
+          break
     else:
       found = true
 
@@ -196,9 +195,9 @@ proc install*(packages: seq[string], force=false) =
     let car = readFile "/car"
     for i in car.splitLines():
       if i.startsWith("dep"):
+        if i.split(" ")[1] in already_installed_packages:
+          continue
         deps.add(i.split(" ")[1])
-  removeFile("/car")
-
   for i in remote_packages:
     if i in already_installed_packages:
       log_info "package already installed: " & i
@@ -211,6 +210,8 @@ proc install*(packages: seq[string], force=false) =
     let car = readFile "/car"
     for i in car.splitLines():
       if i.startsWith("dep"):
+        if i.split(" ")[1] in already_installed_packages:
+          continue
         deps.add(i.split(" ")[1])
     removeFile("/car")
 
