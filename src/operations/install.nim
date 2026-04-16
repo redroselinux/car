@@ -4,8 +4,12 @@ import ../color
 import init
 import times
 
-let packagelist = readFile("/etc/car/packagelist")
-var repro_car = readFile("/etc/repro.car")
+var repro_car: string
+try:
+  repro_car = readFile("/etc/repro.car")
+except IOError:
+  # car is not inited, we can put an example value since the file is unreachable for now
+  repro_car = ""
 
 proc stripSuffix(s: string, suffix: string): string =
   if s.endsWith suffix:
@@ -129,6 +133,7 @@ proc install*(packages: seq[string], force=false) =
     log_error("car is not initialized")
     log_error("run 'car init' to initialize car")
     quit(2)
+  let packagelist = readFile("/etc/car/packagelist")
 
   var local_packages: seq[string]
   var remote_packages: seq[string]
