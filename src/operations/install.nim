@@ -4,6 +4,8 @@ import ../color
 import init
 import times
 
+import ../converters/debian
+
 var repro_car: string
 try:
   repro_car = readFile("/etc/repro.car")
@@ -136,6 +138,7 @@ proc install*(packages: seq[string], force=false) =
   let packagelist = readFile("/etc/car/packagelist")
 
   var local_packages: seq[string]
+  var deb_convert_packages: seq[string]
   var remote_packages: seq[string]
   var already_installed_packages: seq[string]
 
@@ -159,6 +162,9 @@ proc install*(packages: seq[string], force=false) =
         download_disable = true
     if pkg.endsWith ".tar.zst":
       local_packages.add(pkg)
+      continue
+    if pkg.endsWith ".deb":
+      deb_convert_packages.add(pkg)
       continue
     var found = false
 
@@ -203,6 +209,9 @@ proc install*(packages: seq[string], force=false) =
         if i.split(" ")[1] in already_installed_packages:
           continue
         deps.add(i.split(" ")[1])
+  for i in deb_convert_packages:
+    install @[convertDebPackage(i)]
+
   for i in remote_packages:
     if i in already_installed_packages:
       log_info "package already installed: " & i
