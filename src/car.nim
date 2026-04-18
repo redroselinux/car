@@ -55,7 +55,7 @@ when isMainModule:
 
       if arg == "-v" or arg == "--version" or arg == "version":
         log_info(
-          "car version 3.12 (nim rewrite of c rewrite of origin python version) (" &
+          "car version 3.13 (nim rewrite of c rewrite of origin python version) (" &
           CompileDate & ", " & CompileTime & ") [Nim " &
           NimVersion & "] on " & hostOS
         )
