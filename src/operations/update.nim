@@ -7,7 +7,6 @@ import sequtils
 
 proc update*() =
   listup()
-  log_info "reading lists"
 
   let packagelist = readFile("/etc/car/packagelist")
   let repro = readFile("/etc/repro.car")
@@ -38,12 +37,16 @@ proc update*() =
         updatable.add(pkg)
 
   if updatable.len == 0:
-    log_ok "system is up to date"
+    log_ok "System is already up to date"
     quit(0)
-
-  log_info("updating " & $updatable.len & " packages:")
-  echo("        " & updatable.join(", "))
-  stdout.write "      continue? [Y/n] "
+  
+  let packages_word = if updatable.len == 1:
+                        "package"
+                      else:
+                        "packages"
+  log_info("Updating " & $updatable.len & " " & packages_word & ":")
+  echo("    " & updatable.join(", "))
+  stdout.write "  Continue? [Y/n] "
   let confirm = readLine(stdin).toLowerAscii()
   if confirm.startsWith("y") or confirm == "":
     discard
@@ -56,5 +59,5 @@ proc update*() =
 
   install(updatable, force=true)
 
-  log_done("finished system upgrade")
-  log_warn("you should reboot your system right now")
+  log_done("Finished system upgrade")
+  log_warn("You should reboot your system right now")

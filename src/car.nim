@@ -21,21 +21,53 @@ proc isRoot() =
     quit()
 
 proc usage() =
-  log_info "Usage: car [command] [options] [flags]"
-  log_info "You can mix commands: sudo car listup install example"
-  log_info "Options:"
-  log_info "  -v, --version   show version information and exit"
-  log_info "  init |Flags|    initialize car"
-  log_info "       --force    force initialization when already initialized"
-  log_info "  listup          update list of packages"
-  log_info "  install         install packages"
-  log_info "  delete          delete packages"
-  log_info "  update          run listup and perform a system upgrade"
-  log_info "  search          search for packages"
-  log_info "  cleanbuild      use rare to compile a package in docker"
-  log_info ""
-  log_info "License: GPLv3-only"
-  log_info "Authors: Juraj Kollár <mostypc7@gmail.com>"
+  echo "\e[1m\e[93mcar\e[0m v3.14"
+  echo ""
+
+  echo "\e[1mUsage:\e[0m"
+  echo "  car [command] [options] [flags]"
+  echo "\e[3m  You can mix commands (e.g. sudo car listup install example)\e[0m"
+  echo ""
+
+  echo "\e[1mOptions:\e[0m"
+  echo "  -v, --version        Show version information and exit"
+  echo ""
+
+  echo "\e[1mCommands:\e[0m"
+
+  echo "  \e[36minit\e[0m                 Initialize car"
+  echo "    --force            Force initialization if already initialized"
+  echo "\e[3m  car init\e[0m"
+  echo "\e[3m  car init --force\e[0m"
+  echo ""
+
+  echo "  \e[36mlistup\e[0m               Update list of packages"
+  echo "\e[3m  car listup\e[0m"
+  echo ""
+
+  echo "  \e[36minstall\e[0m              Install packages"
+  echo "\e[3m  car install example\e[0m"
+  echo "\e[3m  car install legacy::example\e[0m"
+  echo ""
+
+  echo "  \e[36mdelete\e[0m               Delete packages"
+  echo "\e[3m  car delete example\e[0m"
+  echo ""
+
+  echo "  \e[36mupdate\e[0m               Run listup and perform system upgrade"
+  echo "\e[3m  car update\e[0m"
+  echo ""
+
+  echo "  \e[36msearch\e[0m               Search for packages"
+  echo "\e[3m  car search h\e[0m"
+  echo ""
+
+  echo "  \e[36mcleanbuild\e[0m           Compile a package in Docker using rare"
+  echo "\e[3m  car cleanbuild nm\e[0m"
+  echo ""
+
+  echo "\e[3mLicense: GPLv3-only\e[0m"
+  echo "\e[3mAuthors: Juraj Kollár <mostypc123@redroselinux.org>\e[0m"
 
 when isMainModule:
   var args = commandLineParams()
@@ -51,16 +83,18 @@ when isMainModule:
           discard execShellCmd("cat /etc/car/packagelist | grep '" & arg.replace("$(", "") & " - '")
           quit()
         else:
-          log_error "car is not inited. did you run 'car init'?"
+          log_error "Car is not initialized. Did you run 'car init'?"
 
-      if arg == "-v" or arg == "--version" or arg == "version":
-        log_info(
-          "car version 3.13 (nim rewrite of c rewrite of origin python version) (" &
-          CompileDate & ", " & CompileTime & ") [Nim " &
-          NimVersion & "] on " & hostOS
-        )
-        log_info "author: mostypc123 <mostypc7@gmail.com>"
-        log_info "source: https://github.com/redroselinux/car"
+      if arg in ["-v", "--version"]:
+        echo "\e[1m\e[93mcar\e[0m version \e[1m3.14\e[0m"
+        echo "\e[3;2mnim rewrite of c rewrite of original python version\e[0m"
+        echo ""
+        echo "\e[1mbuilt\e[0m: " & CompileDate & " " & CompileTime
+        echo "\e[1mnim\e[0m:   " & NimVersion
+        echo "\e[1mos\e[0m:    " & hostOS
+        echo ""
+        echo "\e[1mAuthor\e[0m: mostypc123 <mostypc123@redroselinux.org>\e[0m"
+        echo "\e[1mSource\e[0m: https://github.com/redroselinux/car\e[0m"
         quit()
       elif arg == "init":
         isRoot()
@@ -77,8 +111,7 @@ when isMainModule:
         quit()
       elif arg in ["install", "get", "i"]:
         if args.len < 2:
-          log_error "missing package name"
-          usage()
+          log_error "Missing package name"
           quit()
         isRoot()
         let installArgs = args[(i+1)..^1]
@@ -86,8 +119,7 @@ when isMainModule:
         quit()
       elif arg == "cleanbuild":
         if args.len < 2:
-          log_error "missing package name"
-          usage()
+          log_error "Missing package name"
           quit()
         isRoot()
         let installArgs = args[(i+1)..^1]
@@ -95,7 +127,7 @@ when isMainModule:
         quit()
       elif arg == "delete":
         if args.len < 2:
-          log_error "missing package name"
+          log_error "Missing package name"
           usage()
           quit()
         isRoot()
@@ -107,7 +139,6 @@ when isMainModule:
       elif arg == "search":
         searchMode = true
       else:
-        log_error "unknown option: " & arg
-        usage()
+        log_error "Unknown option: " & arg
         quit()
       inc(i)

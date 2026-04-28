@@ -11,7 +11,7 @@ proc createConfig() =
   createDir("/etc/car")
   createDir("/etc/car/saves")
   writeFile("/etc/repro.car", "")
-  log_pick("mirror (pick one close to you)")
+  log_pick("Mirror (pick one close to you) [default 1]")
   let mirrors = ["https://github.com/redroselinux/car3-pkgs/raw/refs/heads/main/README"]
   var counter = 1
   for i in mirrors:
@@ -21,20 +21,19 @@ proc createConfig() =
   var mirror = readLine(stdin)
   if mirror == "":
     mirror = "1"
-    log_warn("using default mirror")
   writeFile("/etc/car/mirror", mirrors[parseInt(mirror) - 1])
   writeFile("/etc/car/packagelist", "")
   listup()
+  quit(0)
 
 proc init*(force: bool) =
-  log_info("creating car configs")
-
   if not force:
     if isInited():
-      log_error("already initialized. to reinit (not recommended):")
-      log_error("> car init --force")
+      log_error("Already initialized. To reinitialize (not recommended):")
+      echo("  car init --force")
       quit()
+    log_info("Creating car configs")
     createConfig()
   else:
-    log_warn("forced re-init")
+    log_warn("Forced re-init")
     createConfig()
