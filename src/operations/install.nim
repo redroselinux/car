@@ -4,6 +4,8 @@ import osproc
 import ../color
 import init
 import times
+import posix
+import streams
 
 import ../converters/debian
 
@@ -20,24 +22,69 @@ proc stripSuffix(s: string, suffix: string): string =
   else:
     return s
 
+proc parseTarOctal(s: string): int =
+  for c in s:
+    if c < '0' or c > '7': break
+    result = result * 8 + (ord(c) - ord('0'))
+
 proc install_backend(file: string, displayName: string) =
   # 0 - nothing failed
   # 1 - something failed
   # if everything fails, the program quits
   var fail_level = 0
-
   let start = getTime()
 
-  if execShellCmd(
-    "tar -I \"zstd -T0\" -xvf " & file & " -C / --strip-components=1 " &
-    "| sed 's|^[^/]*/||' | grep -v '/$' > /etc/car/saves/" & displayName
-  ) != 0:
-    log_error("Failed to unpack " & file)
-    quit(1)
+  let zstd = startProcess("zstd", args = ["-dc", "-T0", file], options = {poUsePath})
+  let stream = zstd.outputStream
+  let mf = open("/etc/car/saves/" & displayName, fmWrite)
+  var longName = ""
 
-  let manifest = readFile "/car"
+  while true:
+    var hdr = newString(512)
+    if stream.readData(addr hdr[0], 512) < 512: break
+    if hdr[0] == '\0': break
+
+    let typeFlag = hdr[156]
+    let rawName = if longName != "": longName
+                  else: hdr[0..99].strip(chars = {'\0', ' '})
+    longName = ""
+
+    let size = parseTarOctal(hdr[124..135])
+    let blocks = (size + 511) div 512
+    var data = newString(blocks * 512)
+    if blocks > 0: discard stream.readData(addr data[0], blocks * 512)
+
+    if typeFlag == 'L':
+      longName = data[0..<size].strip(chars = {'\0'})
+      continue
+
+    var name = rawName
+    let slash = name.find('/')
+    if slash >= 0: name = name[slash + 1 .. ^1]
+    if name == "": continue
+    let dest = "/" & name
+    if typeFlag == '5' or name.endsWith("/"):
+      createDir(dest)
+      continue
+
+    mf.writeLine(name)
+    createDir(dest.parentDir)
+
+    if typeFlag == '2':
+      let target = hdr[157..256].strip(chars = {'\0', ' '})
+      discard tryRemoveFile(dest)
+      createSymlink(target, dest)
+    else:
+      writeFile(dest, data[0..<size])
+      discard posix.chmod(dest.cstring, Mode(parseTarOctal(hdr[100..107])))
+
+  mf.close()
+  discard zstd.waitForExit()
+  zstd.close()
+
+  let carManifest = readFile("/car")
   var version = "NONE"
-  for line in manifest.split("\n"):
+  for line in carManifest.split("\n"):
     if line.startsWith("version "):
       version = line.split(" ")[1]
     elif line.startsWith("exec"):
@@ -48,20 +95,20 @@ proc install_backend(file: string, displayName: string) =
   let packages_config = open("/etc/repro.car", fmAppend)
   packages_config.writeLine(displayName & "=" & version)
   packages_config.close()
-  repro_car = readFile("/etc/repro.car") # reload
+  repro_car = readFile("/etc/repro.car")
 
-  var elapsed = getTime() - start
-  var fail_level_word = "sucesfully"
-  if fail_level == 1:
-    fail_level_word = "\e[1m\e[93mpartially sucesfully\e[0m"
+  let elapsed = getTime() - start
+  let fw = if fail_level == 1: "\e[1m\e[93mpartially sucesfully\e[0m" else: "sucesfully"
+  let us = elapsed.inMicroseconds
+  let timeStr = if us < 1_000_000:
+                  formatFloat(us.float / 1000.0, ffDecimal, 1) & " ms"
+                else:
+                  formatFloat(us.float / 1_000_000.0, ffDecimal, 1) & " s"
+
   if version == "NONE" or version == "":
-    log_ok(
-      "Installed " & displayName & " " & fail_level_word & " in " & $elapsed.inMilliseconds & " ms"
-    )
+    log_ok("Installed " & displayName & " " & fw & " in " & timeStr)
   else:
-    log_ok(
-      "Installed " & displayName & " (" & version & ") " & fail_level_word & " in " & $elapsed.inMilliseconds & " ms"
-    )
+    log_ok("Installed " & displayName & " (" & version & ") " & fw & " in " & timeStr)
 
 var installedLegacy: seq[string] = @[]
 proc legacy_install(package: string) =

@@ -1,7 +1,6 @@
 import os
 import strutils
 import sequtils
-import times
 import ../color
 
 proc delete*(packages: seq[string]) =
