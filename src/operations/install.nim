@@ -1,5 +1,6 @@
 import os
 import strutils
+import osproc
 import ../color
 import init
 import times
@@ -137,6 +138,7 @@ proc install*(packages: seq[string], force=false) =
   var deb_convert_packages: seq[string]
   var remote_packages: seq[string]
   var already_installed_packages: seq[string]
+  var remote_downloads: seq[(string, string, string)]
 
   for pkg in packages:
     if pkg.startsWith("legacy::"):
@@ -159,29 +161,59 @@ proc install*(packages: seq[string], force=false) =
     if pkg.endsWith ".deb":
       deb_convert_packages.add(pkg)
       continue
-    var found = false
-
+    let cachePath = "/var/cache/" & pkg & ".tar.zst"
     if not download_disable:
-      for line in packagelist.split("\n"):
-        if not line.startsWith("version") or line == "":
-          if line.startswith(pkg & " - "):
-            found = true
-            let download = line.split(" - ")[1]
-            log_info("Downloading " & download.replace("https://", "").replace("github.com/", "(gh) "))
-            let exit = execShellCmd("curl -s -L -o /var/cache/" & pkg & ".tar.zst " & download)
-            if exit != 0:
-              log_error("Failed to download package " & pkg & " (exit " & $exit & ")")
-              quit(1)
-            stdout.write "\e[A\e[J"
-            flushFile(stdout)
+      var download = ""
+      for line in packagelist.splitLines():
+        if line.len == 0 or line.startsWith("version"):
+          continue
+        if line.startsWith(pkg & " - "):
+          let parts = line.split(" - ", 1)
+          if parts.len == 2:
+            download = parts[1].strip()
             break
-    else:
-      found = true
+      if download.len == 0:
+        log_error("Package " & pkg & " not found - skipping")
+        continue
+      remote_downloads.add((pkg, download, cachePath))
+    remote_packages.add cachePath
 
-    if not found:
-      log_error("Package " & pkg & " not found - skipping")
-    else:
-      remote_packages.add "/var/cache/" & pkg & ".tar.zst"
+  if remote_downloads.len > 0:
+    var jobs = 6
+    let jobsRaw = getEnv("CAR_DOWNLOAD_JOBS", "6")
+    try:
+      let parsed = parseInt(jobsRaw)
+      if parsed > 0:
+        jobs = parsed
+    except ValueError:
+      discard
+    var startIdx = 0
+    var downloadLogLines = 0
+    while startIdx < remote_downloads.len:
+      let endIdx = min(startIdx + jobs - 1, remote_downloads.high)
+      var workers: seq[(string, string, Process)]
+      for idx in startIdx..endIdx:
+        let (pkg, download, cachePath) = remote_downloads[idx]
+        log_info("Downloading " & pkg)
+        downloadLogLines += 1
+        let downloadProc = startProcess(
+          "curl",
+          args = @["-s", "-L", "-o", cachePath, download],
+          options = {poUsePath}
+        )
+        workers.add((pkg, cachePath, downloadProc))
+
+      for worker in workers:
+        let exitCode = waitForExit(worker[2])
+        close(worker[2])
+        if exitCode != 0:
+          log_error("Failed to download package " & worker[0] & " (exit " & $exitCode & ")")
+          quit(1)
+
+      startIdx = endIdx + 1
+    for _ in 0..<downloadLogLines:
+      stdout.write("\e[1A\r\e[J")
+    flushFile(stdout)
 
   var deps: seq[string]
 
