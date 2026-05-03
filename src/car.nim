@@ -21,7 +21,7 @@ proc isRoot() =
     quit()
 
 proc usage() =
-  echo "\e[1m\e[93mcar\e[0m v3.14"
+  echo "\e[1m\e[93mcar\e[0m v3.15"
   echo ""
 
   echo "\e[1mUsage:\e[0m"
@@ -86,7 +86,7 @@ when isMainModule:
           log_error "Car is not initialized. Did you run 'car init'?"
 
       if arg in ["-v", "--version"]:
-        echo "\e[1m\e[93mcar\e[0m version \e[1m3.14\e[0m"
+        echo "\e[1m\e[93mcar\e[0m version \e[1m3.15\e[0m"
         echo "\e[3;2mnim rewrite of c rewrite of original python version\e[0m"
         echo ""
         echo "\e[1mbuilt\e[0m: " & CompileDate & " " & CompileTime
