@@ -10,7 +10,11 @@ proc isInited*(): bool =
 proc createConfig() =
   createDir("/etc/car")
   createDir("/etc/car/saves")
-  writeFile("/etc/repro.car", "")
+  try:
+    discard readFile("/etc/repro.car") # if suceeds, we are on a redrose system
+  except:
+    # not a redrose system
+    writeFile("/etc/repro.car", "")
   log_pick("Mirror (pick one close to you) [default 1]")
   let mirrors = ["https://github.com/redroselinux/car3-pkgs/raw/refs/heads/main/README"]
   var counter = 1

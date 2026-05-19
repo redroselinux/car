@@ -110,6 +110,8 @@ proc update*() =
   writeFile("/etc/repro.car", reproLines.join("\n"))
 
   install(updateAddPkg, force=true)
+  for pkg in updateAddPkg:
+    writeFile("/etc/car/saves/" & pkg & "-update", "Package was installed by maintainer-issued update.")
   delete(updateDelPkg)
   install(updatable, force=true)
 

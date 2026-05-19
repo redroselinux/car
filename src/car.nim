@@ -8,7 +8,7 @@ import operations/listup
 import operations/install
 import operations/delete
 import operations/update
-import operations/rarebuild
+import operations/why
 
 {.passC: "-O3 -flto -funroll-loops -fstrict-aliasing -fomit-frame-pointer -ftree-vectorize -fprefetch-loop-arrays -floop-interchange -floop-block -floop-unroll-and-jam -ffast-math -fassociative-math -fno-trapping-math".}
 
@@ -26,7 +26,7 @@ proc usage() =
 
   echo "\e[1mUsage:\e[0m"
   echo "  car [command] [options] [flags]"
-  echo "\e[3m  You can mix commands (e.g. sudo car listup install example)\e[0m"
+  echo "\e[3m  You can mix some commands (e.g. sudo car listup install example)\e[0m"
   echo ""
 
   echo "\e[1mOptions:\e[0m"
@@ -60,10 +60,6 @@ proc usage() =
 
   echo "  \e[36msearch\e[0m               Search for packages"
   echo "\e[3m  car search h\e[0m"
-  echo ""
-
-  echo "  \e[36mcleanbuild\e[0m           Compile a package in Docker using rare"
-  echo "\e[3m  car cleanbuild nm\e[0m"
   echo ""
 
   echo "\e[3mLicense: GPLv3-only\e[0m"
@@ -118,13 +114,8 @@ when isMainModule:
         install installArgs
         quit()
       elif arg == "cleanbuild":
-        if args.len < 2:
-          log_error "Missing package name"
-          quit()
-        isRoot()
-        let installArgs = args[(i+1)..^1]
-        rareBuild installArgs
-        quit()
+        log_error "This option is removed in Car 3.15."
+        quit 2
       elif arg == "delete":
         if args.len < 2:
           log_error "Missing package name"
@@ -134,6 +125,13 @@ when isMainModule:
         let deleteArgs = args[(i+1)..^1]
         delete deleteArgs
         quit()
+      elif arg == "why":
+        if args.len < 2:
+          log_error "Missing package name"
+          usage()
+          quit()
+        whyInstalled args[(i+1)..^1]
+        quit(0)
       elif arg in ["--force"]:
         continue
       elif arg == "search":
@@ -141,4 +139,4 @@ when isMainModule:
       else:
         log_error "Unknown option: " & arg
         quit()
-      inc(i)
+      inc i
