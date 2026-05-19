@@ -34,7 +34,7 @@ proc delete*(packages: seq[string]) =
       reproLines.keepItIf(not it.startsWith(pkg & "="))
       log_ok("Deleted " & pkg)
     else:
-      log_error("Package not found: " & pkg & " - skipping")
+      log_error("Package not installed: " & pkg & " - skipping")
       skipped_packages.add(pkg)
       continue
 
