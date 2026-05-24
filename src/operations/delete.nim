@@ -2,6 +2,7 @@ import os
 import strutils
 import sequtils
 import color
+import fsck_symlink_attacks
 
 proc delete*(packages: seq[string]) =
   var reproLines = readFile("/etc/repro.car").splitLines()
@@ -38,8 +39,8 @@ proc delete*(packages: seq[string]) =
             log_error("Permission denied or error deleting: " & target)
         else:
           log_warn("File missing: " & target)
-      removeFile("/etc/car/saves/" & pkg)
-      removeFile("/etc/car/saves/" & pkg & "-update")
+      fsckSymlinkAttacks("/etc/car/saves/" & pkg); removeFile("/etc/car/saves/" & pkg)
+      fsckSymlinkAttacks("/etc/car/saves/" & pkg & "-update"); removeFile("/etc/car/saves/" & pkg & "-update")
     else:
       log_warn("No tracking file found for: " & pkg)
 

@@ -1,9 +1,11 @@
 import color
 import os
 import strutils
+import fsck_symlink_attacks
 
 proc convertDebPackage*(input: string): string =
   # clean
+  fsckSymlinkAttacks("/tmp/car_convert_deb")
   discard execShellCmd("rm -rf /tmp/car_convert_deb")
 
   log_info "Extracting " & input
@@ -15,11 +17,15 @@ proc convertDebPackage*(input: string): string =
 
   log_info "Extracting /tmp/car_convert_deb/data.tar.*"
   createDir("/tmp/car_convert_deb/package")
+  fsckSymlinkAttacks("/tmp/car_convert_deb/data.tar.gz")
+  fsckSymlinkAttacks("/tmp/car_convert_deb/data.tar.xz")
   if execShellCmd("tar -xf /tmp/car_convert_deb/data.tar.* -C /tmp/car_convert_deb/package --strip-components=1") != 0:
     log_error("Failed to extract data.tar.*")
 
   log_info "Extracting /tmp/car_convert_deb/control.tar.*"
   createDir("/tmp/car_convert_deb/info")
+  fsckSymlinkAttacks("/tmp/car_convert_deb/control.tar.gz")
+  fsckSymlinkAttacks("/tmp/car_convert_deb/control.tar.xz")
   if execShellCmd("tar -xf /tmp/car_convert_deb/control.tar.* -C /tmp/car_convert_deb/info --strip-components=1") != 0:
     log_error("Failed to extract control.tar.*")
 
@@ -43,9 +49,11 @@ proc convertDebPackage*(input: string): string =
   for i in deps:
     depslines = depslines & "dep " & i.strip() & "\n"
 
+  fsckSymlinkAttacks("/tmp/car_convert_deb/package/car")
   writeFile("/tmp/car_convert_deb/package/car", "exec printf \"\e[1m\e[93m⚠\e[0m This package is converted from a .deb package\\n\"\nversion " & version & "\n" & depslines)
 
   log_info "Creating a car package at /var/cache/" & displayName & ".tar.zst"
+  fsckSymlinkAttacks("/var/cache/" & displayName & ".tar.zst")
   if execShellCmd("tar -I \"zstd -T0\" -cf /var/cache/" & displayName & ".tar.zst -C /tmp/car_convert_deb package") != 0:
     log_error "Failed to create the package"
     quit(1)

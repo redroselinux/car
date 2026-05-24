@@ -4,6 +4,7 @@ import osproc
 import color
 import init
 import times
+import fsck_symlink_attacks
 
 import ../converters/debian
 
@@ -31,6 +32,7 @@ proc install_backend(file: string, displayNamec: string) =
 
   let start = getTime()
 
+  fsckSymlinkAttacks("/car")
   # package is arch, and arch packages dont need strip
   let stripComponents = if file.endsWith(".pkg.tar.zst"): "" else: "--strip-components=1"
   if execShellCmd(
@@ -47,9 +49,9 @@ proc install_backend(file: string, displayNamec: string) =
     # maybe this is an arch package?
     try:
       manifest = "##ARCHPKG##\n" & readFile "/.PKGINFO"
-      removeFile("/.PKGINFO")
-      removeFile("/.MTREE")
-      removeFile("/.BUILDINFO")
+      fsckSymlinkAttacks("/.PKGINFO"); removeFile("/.PKGINFO")
+      fsckSymlinkAttacks("/.MTREE"); removeFile("/.MTREE")
+      fsckSymlinkAttacks("/.BUILDINFO"); removeFile("/.BUILDINFO")
     except:
       log_error "Failed to read manifest."
       quit 1
@@ -90,8 +92,10 @@ proc install_backend(file: string, displayNamec: string) =
       if key == "optdepend":
         log_option "Optional dependency: " & value
 
+  fsckSymlinkAttacks("/car")
   removeFile("/car")
 
+  fsckSymlinkAttacks("/etc/repro.car")
   let packages_config = open("/etc/repro.car", fmAppend)
   packages_config.writeLine(displayName & "=" & version)
   packages_config.close()
@@ -117,6 +121,8 @@ proc legacy_install(package: string) =
   installedLegacy.add(package)
 
   log_info("Attempting to fetch from car-coreutils-repo")
+  fsckSymlinkAttacks("/tmp/http_status")
+  fsckSymlinkAttacks("/tmp/install_script_")
   discard execShellCmd(
     "curl -sL -w '%{http_code}' -o /tmp/install_script_ " &
     "https://github.com/redroselinux/car-coreutils-repo/raw/refs/heads/main/" &
@@ -124,6 +130,7 @@ proc legacy_install(package: string) =
   )
 
   if readFile("/tmp/http_status").strip() == "200":
+    fsckSymlinkAttacks("/tmp/install_script.py")
     copyFile("/tmp/install_script_", "/tmp/install_script.py")
   else:
     log_info("\e[1A\r\e[1m\e[94m→\e[0m Attempting to fetch from car-binary-storage    ")
@@ -246,6 +253,7 @@ proc install*(packages: seq[string], force=false, running_as_dep=false) =
         let (pkg, download, cachePath) = remote_downloads[idx]
         log_info("Downloading " & pkg)
         downloadLogLines += 1
+        fsckSymlinkAttacks(cachePath)
         let downloadProc = startProcess(
           "curl",
           args = @["-s", "-L", "-o", cachePath, download],

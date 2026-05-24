@@ -5,6 +5,7 @@ import install
 import delete
 import strutils
 import sequtils
+import fsck_symlink_attacks
 
 proc update*() =
   listup()
@@ -103,6 +104,7 @@ proc update*() =
   else:
     quit(130)
 
+  fsckSymlinkAttacks("/etc/car/update")
   writeFile("/etc/car/update", updateInfo)
 
   var reproLines = readFile("/etc/repro.car").splitLines()
