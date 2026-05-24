@@ -1,12 +1,14 @@
 import os
 import strutils
 import osproc
-import ../color
+import color
 import init
 import times
 
 import ../converters/debian
 
+var deps: seq[string]
+var already_installed_packages: seq[string]
 var repro_car: string
 try:
   repro_car = readFile("/etc/repro.car")
@@ -20,7 +22,8 @@ proc stripSuffix(s: string, suffix: string): string =
   else:
     return s
 
-proc install_backend(file: string, displayName: string) =
+proc install_backend(file: string, displayNamec: string) =
+  var displayName = displayNamec
   # 0 - nothing failed
   # 1 - something failed
   # if everything fails, the program quits
@@ -28,22 +31,66 @@ proc install_backend(file: string, displayName: string) =
 
   let start = getTime()
 
+  # package is arch, and arch packages dont need strip
+  let stripComponents = if file.endsWith(".pkg.tar.zst"): "" else: "--strip-components=1"
   if execShellCmd(
-    "tar -I \"zstd -T0\" -xvf " & file & " -C / --strip-components=1 " &
+    "tar -I \"zstd -T0\" -xvf " & file & " -C / " & stripComponents &
     "| sed 's|^[^/]*/||' | grep -v '/$' > /etc/car/saves/" & displayName
   ) != 0:
     log_error("Failed to unpack " & file)
+    log_info("Maybe try running 'car clearcache'?")
     quit(1)
-
-  let manifest = readFile "/car"
+  var manifest: string
+  try:
+    manifest = readFile "/car"
+  except:
+    # maybe this is an arch package?
+    try:
+      manifest = "##ARCHPKG##\n" & readFile "/.PKGINFO"
+      removeFile("/.PKGINFO")
+      removeFile("/.MTREE")
+      removeFile("/.BUILDINFO")
+    except:
+      log_error "Failed to read manifest."
+      quit 1
   var version = "NONE"
+  var arch_package = false
   for line in manifest.split("\n"):
-    if line.startsWith("version "):
-      version = line.split(" ")[1]
-    elif line.startsWith("exec"):
-      if execShellCmd(line) != 0:
-        log_warn("A script failed to execute: " & line.replace("exec ", ""))
-        fail_level = 1
+    if line == "##ARCHPKG##":
+      log_warn "Installing an Arch Linux package"
+      arch_package = true
+    if not arch_package:
+      if not (" " in line):
+        continue
+      let line_split_1 = line.split(" ")[1]
+      if line.startsWith("version "):
+        version = line_split_1
+      elif line.startsWith("exec"):
+        if execShellCmd(line) != 0:
+          log_warn("A script failed to execute: " & line.replace("exec ", ""))
+          fail_level = 1
+      elif line.startsWith("dep"):
+        if line_split_1 in already_installed_packages:
+          continue
+        deps.add(line_split_1)
+    else:
+      if (not ("=" in line)) or line[0] == '#':
+        continue
+      let key = line.split("=")[0].strip
+      let value = line.split("=")[1].strip
+      if key == "pkgver":
+        version = value
+      if key == "pkgname":
+        # we found the name, now we move the /etc/car/saves file
+        let displayNameNew = value
+        moveFile("/etc/car/saves/" & displayName, "/etc/car/saves/" & displayNameNew)
+        displayName = displayNameNew
+      if key == "depend":
+        deps.add(value)
+      if key == "optdepend":
+        log_option "Optional dependency: " & value
+
+  removeFile("/car")
 
   let packages_config = open("/etc/repro.car", fmAppend)
   packages_config.writeLine(displayName & "=" & version)
@@ -127,7 +174,7 @@ proc legacy_install(package: string) =
 
   log_warn("This package is not tracked by car. Try using old car for better results, which is also not recommended.")
 
-proc install*(packages: seq[string], force=false) =
+proc install*(packages: seq[string], force=false, running_as_dep=false) =
   if not isInited():
     log_error("Car is not initialized")
     log_error("Run 'car init' to initialize car")
@@ -137,10 +184,13 @@ proc install*(packages: seq[string], force=false) =
   var local_packages: seq[string]
   var deb_convert_packages: seq[string]
   var remote_packages: seq[string]
-  var already_installed_packages: seq[string]
   var remote_downloads: seq[(string, string, string)]
 
   for pkg in packages:
+    # the system is upgrading and this is what brake does h
+    if fileExists("/etc/car/saves/" & pkg & "-brake"):
+      log_option "Skipping " & pkg & ": package is braked"
+      continue
     if pkg.startsWith("legacy::"):
       legacy_install(pkg.split("::")[1])
       continue
@@ -148,7 +198,7 @@ proc install*(packages: seq[string], force=false) =
       continue
     if pkg & "=" in repro_car:
       if not force:
-        log_info("Package already installed: " & pkg)
+        log_option "Skipping " & pkg & ": package is already installed"
         already_installed_packages.add(pkg)
         continue
     var download_disable = false
@@ -215,41 +265,28 @@ proc install*(packages: seq[string], force=false) =
       stdout.write("\e[1A\r\e[J")
     flushFile(stdout)
 
-  var deps: seq[string]
-
   for i in local_packages:
     if i in already_installed_packages:
-      log_info "Package already installed: " & i
+      if not running_as_dep:
+        log_option "Skipping " & i & ": package is already installed"
       continue
     var displayName = i
     if "/" in displayName:
       displayName = displayName[displayName.rfind("/") + 1 .. ^1]
     displayName = stripSuffix(displayName, ".tar.zst")
     install_backend i, displayName
-    let car = readFile "/car"
-    for i in car.splitLines():
-      if i.startsWith("dep"):
-        if i.split(" ")[1] in already_installed_packages:
-          continue
-        deps.add(i.split(" ")[1])
   for i in deb_convert_packages:
     install @[convertDebPackage(i)]
 
   for i in remote_packages:
     if i in already_installed_packages:
-      log_info "Package already installed: " & i
+      if not running_as_dep:
+        log_option "Skipping " & i & ": package is already installed"
       continue
     var displayName = i
     if displayName.startsWith("/var/cache/"):
       displayName = displayName[11..^1]
     displayName = stripSuffix(displayName, ".tar.zst")
     install_backend i, displayName
-    let car = readFile "/car"
-    for i in car.splitLines():
-      if i.startsWith("dep"):
-        if i.split(" ")[1] in already_installed_packages:
-          continue
-        deps.add(i.split(" ")[1])
-    removeFile("/car")
 
-    install deps
+    install(deps, running_as_dep=true)

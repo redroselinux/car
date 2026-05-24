@@ -1,5 +1,5 @@
 import tables
-import ../color
+import color
 import listup
 import install
 import delete

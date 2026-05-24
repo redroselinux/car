@@ -1,46 +1,36 @@
-import ../color
 import os
+import color
 import strutils
+import sequtils
 
 proc whyInstalled*(packages: seq[string]) =
   for package in packages:
-    if not (package in readFile("/etc/repro.car")):
-      log_error "Package not installed."
+    let repro = readFile("/etc/repro.car")
+    if not repro.splitLines().anyIt(it.startsWith(package & "=")):
+      log_error "Package not installed: " & package
       quit(1)
 
     var strap = false
-    var manual_install = false
     var update = false
+    var manual_install = false
 
-    # if the package + a newline or a newline + the package is in
-    # /etc/redrose-strap, the package was copied during install
     try:
       let redrose_strap = readFile("/etc/redrose-strap")
-      if (package & "\n" in redrose_strap) or ("\n" & package in redrose_strap):
+      if redrose_strap.splitLines().anyIt(it.strip() == package):
         strap = true
     except:
-      # testing on a non-redrose system; skip
       discard
 
-    # if /etc/car/saves/pkg-up exists, the package was installed by
-    # a maintainer-issued update; like adding a new redrose cli tool
-    try:
-      discard readFile("/etc/car/saves/" & package & "-up")
+    if fileExists("/etc/car/saves/" & package & "-update"):
       update = true
-    except:
-      update = false
 
-    # if none of these above are true, and /etc/car/saves/package exists,
-    # the package was installed manually.
     if not (strap or update):
-      try:
-        discard readFile("/etc/car/saves/" & package)
+      if fileExists("/etc/car/saves/" & package):
         manual_install = true
-      except:
+      else:
         log_error "Package seems to be installed, but car is not able to find its savefile."
         quit(1)
 
-    # print result
     if strap:
       log_info package & " came preinstalled with redrose"
     elif update:

@@ -1,5 +1,5 @@
 import os
-import ../color
+import color
 import strutils
 
 import listup

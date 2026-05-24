@@ -1,6 +1,6 @@
 import os
 import strutils
-import ../color
+import color
 
 proc listup*() =
   # TODO: custom repos

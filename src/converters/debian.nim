@@ -1,4 +1,4 @@
-import ../color
+import color
 import os
 import strutils
 
@@ -6,22 +6,22 @@ proc convertDebPackage*(input: string): string =
   # clean
   discard execShellCmd("rm -rf /tmp/car_convert_deb")
 
-  log_info "extracting " & input
+  log_info "Extracting " & input
   var ainput = absolutePath(input)
   createDir("/tmp/car_convert_deb")
   setCurrentDir("/tmp/car_convert_deb")
   if execShellCmd("ar -x " & ainput) != 0:
-    log_error("failed to unpack")
+    log_error("Failed to unpack")
 
-  log_info "extracting /tmp/car_convert_deb/data.tar.xz"
+  log_info "Extracting /tmp/car_convert_deb/data.tar.*"
   createDir("/tmp/car_convert_deb/package")
-  if execShellCmd("tar -xf /tmp/car_convert_deb/data.tar.xz -C /tmp/car_convert_deb/package --strip-components=1") != 0:
-    log_error("failed to extract data.tar.xz")
+  if execShellCmd("tar -xf /tmp/car_convert_deb/data.tar.* -C /tmp/car_convert_deb/package --strip-components=1") != 0:
+    log_error("Failed to extract data.tar.*")
 
-  log_info "extracting /tmp/car_convert_deb/control.tar.xz"
+  log_info "Extracting /tmp/car_convert_deb/control.tar.*"
   createDir("/tmp/car_convert_deb/info")
-  if execShellCmd("tar -xf /tmp/car_convert_deb/control.tar.xz -C /tmp/car_convert_deb/info --strip-components=1") != 0:
-    log_error("failed to extract control.tar.xz")
+  if execShellCmd("tar -xf /tmp/car_convert_deb/control.tar.* -C /tmp/car_convert_deb/info --strip-components=1") != 0:
+    log_error("Failed to extract control.tar.*")
 
   var displayName = "Unknown"
   var version = "Unknown"
@@ -43,13 +43,11 @@ proc convertDebPackage*(input: string): string =
   for i in deps:
     depslines = depslines & "dep " & i.strip() & "\n"
 
-  writeFile("/tmp/car_convert_deb/package/car", "exec printf \"\e[1m\e[93mwarning\e[0m: this package is converted from a .deb package\\n\"\nversion " & version & "\n" & depslines)
+  writeFile("/tmp/car_convert_deb/package/car", "exec printf \"\e[1m\e[93m⚠\e[0m This package is converted from a .deb package\\n\"\nversion " & version & "\n" & depslines)
 
-  log_info "creating a car package"
+  log_info "Creating a car package at /var/cache/" & displayName & ".tar.zst"
   if execShellCmd("tar -I \"zstd -T0\" -cf /var/cache/" & displayName & ".tar.zst -C /tmp/car_convert_deb package") != 0:
-    log_error "failed to create the package"
+    log_error "Failed to create the package"
     quit(1)
-
-  log_ok "finished converting package"
 
   return "/var/cache/" & displayName & ".tar.zst"
