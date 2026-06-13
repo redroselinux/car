@@ -5,4 +5,6 @@ license = "GPL-3.0-only"
 srcDir = "src"
 bin = @["car"]
 
+switch("mm", "arc")
+
 requires "nim >= 2.2.6"

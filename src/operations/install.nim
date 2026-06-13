@@ -7,6 +7,7 @@ import times
 import fsck_symlink_attacks
 
 import ../converters/debian
+import ../converters/appimage
 
 var deps: seq[string]
 var already_installed_packages: seq[string]
@@ -190,6 +191,7 @@ proc install*(packages: seq[string], force=false, running_as_dep=false) =
 
   var local_packages: seq[string]
   var deb_convert_packages: seq[string]
+  var appimage_convert_packages: seq[string]
   var remote_packages: seq[string]
   var remote_downloads: seq[(string, string, string)]
 
@@ -217,6 +219,9 @@ proc install*(packages: seq[string], force=false, running_as_dep=false) =
       continue
     if pkg.endsWith ".deb":
       deb_convert_packages.add(pkg)
+      continue
+    if pkg.endsWith(".AppImage"):
+      appimage_convert_packages.add(pkg)
       continue
     let cachePath = "/var/cache/" & pkg & ".tar.zst"
     if not download_disable:
@@ -283,8 +288,12 @@ proc install*(packages: seq[string], force=false, running_as_dep=false) =
       displayName = displayName[displayName.rfind("/") + 1 .. ^1]
     displayName = stripSuffix(displayName, ".tar.zst")
     install_backend i, displayName
+
   for i in deb_convert_packages:
     install @[convertDebPackage(i)]
+
+  for i in appimage_convert_packages:
+    install @[convertAppImage(i)]
 
   for i in remote_packages:
     if i in already_installed_packages:
@@ -297,4 +306,4 @@ proc install*(packages: seq[string], force=false, running_as_dep=false) =
     displayName = stripSuffix(displayName, ".tar.zst")
     install_backend i, displayName
 
-    install(deps, running_as_dep=true)
+    install deps, running_as_dep=true

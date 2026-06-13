@@ -12,11 +12,13 @@ import operations/why
 import operations/clear_cache
 import operations/search
 import operations/brake
+import operations/list
 
 {.passC: "-O3 -flto -funroll-loops -fstrict-aliasing -fomit-frame-pointer -ftree-vectorize -fprefetch-loop-arrays -floop-interchange -floop-block -floop-unroll-and-jam -ffast-math -fassociative-math -fno-trapping-math".}
 
 var initMode = false
 var searchMode = false
+var tiresMode = false
 
 proc isRoot() =
   if geteuid() != 0:
@@ -40,7 +42,7 @@ proc usage() =
   echo "\e[3m  car init --force\e[0m"
   echo "  \e[36mlistup\e[0m               Update list of packages"
   echo "\e[3m  car listup\e[0m"
-  echo "  \e[36minstall\e[0m              Install packages, supports Car .tar.zst, Pacman .pkg.tar.zst and DPKG .deb"
+  echo "  \e[36minstall\e[0m              Install packages, supports Car .tar.zst, Pacman .pkg.tar.zst, AppImage and DPKG .deb"
   echo "\e[3m  car install example\e[0m"
   echo "\e[3m  car install legacy::example\e[0m"
   echo "  \e[36mdelete\e[0m               Delete packages"
@@ -51,6 +53,7 @@ proc usage() =
   echo "\e[3m  car search h\e[0m"
   echo "  \e[36mwhy\e[0m                  Why is this package installed?"
   echo "\e[3m  car why h\e[0m"
+  echo "  \e[36mlist\e[0m                 List all installed packages"
   echo "  \e[36mclearcache\e[0m           Clear all cache"
   echo "  \e[36mbrake/release\e[0m        Do not/do update this package"
   echo "\e[3m  car brake bun-js     \e[2myk why\e[0m"
@@ -72,6 +75,9 @@ when isMainModule:
           quit()
         else:
           log_error "Car is not initialized. Did you run 'car init'?"
+      elif tiresMode:
+        listPackageFiles(arg)
+        quit 0
 
       if arg in ["-v", "--version"]:
         echo "\e[1m\e[93mcar\e[0m version \e[1m3.15\e[0m"
@@ -144,8 +150,12 @@ when isMainModule:
         quit(0)
       elif arg in ["--force"]:
         continue
+      elif arg == "list":
+        listInstalled()
       elif arg == "search":
         searchMode = true
+      elif arg == "tires":
+        tiresMode = true
       else:
         log_error "Unknown option: " & arg
         quit()
