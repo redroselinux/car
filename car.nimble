@@ -1,4 +1,6 @@
-version = "3.15"
+import std/strutils
+
+version = "3.16"
 author = "Juraj Kollár"
 description = "A new awesome nimble package"
 license = "GPL-3.0-only"
@@ -8,3 +10,11 @@ bin = @["car"]
 switch("mm", "arc")
 
 requires "nim >= 2.2.6"
+
+task syncVersion, "Sync version from Version file into car.nimble":
+  let v = readFile("Version").strip()
+  var lines = readFile("car.nimble").splitLines
+  for i, line in lines:
+    if line.startsWith("version "):
+      lines[i] = "version = \"" & v & "\""
+  writeFile("car.nimble", lines.join("\n"))

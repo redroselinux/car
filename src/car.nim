@@ -14,11 +14,17 @@ import operations/search
 import operations/brake
 import operations/list
 
-{.passC: "-O3 -flto -funroll-loops -fstrict-aliasing -fomit-frame-pointer -ftree-vectorize -fprefetch-loop-arrays -floop-interchange -floop-block -floop-unroll-and-jam -ffast-math -fassociative-math -fno-trapping-math".}
+{.passC: "-O3 -flto -funroll-loops -fstrict-aliasing -fomit-frame-pointer " &
+         "-ftree-vectorize -fprefetch-loop-arrays -floop-interchange " &
+         "-floop-block -floop-unroll-and-jam -ffast-math -fassociative-math " &
+         "-fno-trapping-math".}
 
 var initMode = false
 var searchMode = false
 var tiresMode = false
+
+# the Version file
+const VERSION = staticRead("../Version")
 
 proc isRoot() =
   if geteuid() != 0:
@@ -26,16 +32,16 @@ proc isRoot() =
     quit()
 
 proc usage() =
-  echo "\e[1m\e[93mcar\e[0m v3.15"
+  log_info "\e[1m\e[93mcar\e[0m v" & VERSION
   echo ""
-  echo "\e[1mUsage:\e[0m"
+  log_info "\e[1mUsage:\e[0m"
   echo "  car [command] [options] [flags]"
   echo "\e[3m  You can mix some commands (e.g. sudo car listup install example)\e[0m"
   echo ""
-  echo "\e[1mOptions:\e[0m"
+  log_info "\e[1mOptions:\e[0m"
   echo "  -v, --version        Show version information and exit"
   echo ""
-  echo "\e[1mCommands:\e[0m"
+  log_info "\e[1mCommands:\e[0m"
   echo "  \e[36minit\e[0m                 Initialize car"
   echo "    --force            Force initialization if already initialized"
   echo "\e[3m  car init\e[0m"
@@ -57,8 +63,8 @@ proc usage() =
   echo "  \e[36mclearcache\e[0m           Clear all cache"
   echo "  \e[36mbrake/release\e[0m        Do not/do update this package"
   echo "\e[3m  car brake bun-js     \e[2myk why\e[0m"
-  echo "\n\e[3mLicense: GPLv3-only\e[0m"
-  echo "\e[3mAuthor: Juraj Kollár <mostypc123@redroselinux.org>\e[0m"
+  log_info "\n\e[3mLicense: GPLv3-only\e[0m"
+  log_info "\e[3mAuthor: Juraj Kollár <mostypc123@redroselinux.org>\e[0m"
 
 when isMainModule:
   var args = commandLineParams()
@@ -80,15 +86,11 @@ when isMainModule:
         quit 0
 
       if arg in ["-v", "--version"]:
-        echo "\e[1m\e[93mcar\e[0m version \e[1m3.15\e[0m"
+        echo "\e[1m\e[93mcar\e[0m version \e[1m" & VERSION & "\e[0m"
         echo "\e[3;2mnim rewrite of c rewrite of original python version\e[0m"
         echo ""
         echo "\e[1mbuilt\e[0m: " & CompileDate & " " & CompileTime
         echo "\e[1mnim\e[0m:   " & NimVersion
-        echo "\e[1mos\e[0m:    " & hostOS
-        echo ""
-        echo "\e[1mAuthor\e[0m: mostypc123 <mostypc123@redroselinux.org>\e[0m"
-        echo "\e[1mSource\e[0m: https://github.com/redroselinux/car\e[0m"
         quit()
       elif arg == "init":
         isRoot()
@@ -112,7 +114,7 @@ when isMainModule:
         install installArgs
         quit()
       elif arg == "cleanbuild":
-        log_error "This option is removed in Car 3.15."
+        log_error "This option is removed in Car 3.16."
         log_info "Use the program 'fuel' as a replacement."
         quit 2
       elif arg == "clearcache":
