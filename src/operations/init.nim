@@ -1,9 +1,8 @@
 import os
+import repo
 import color
 import strutils
 import fsck_symlink_attacks
-
-import listup
 
 proc isInited*(): bool =
   dirExists("/etc/car")

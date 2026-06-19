@@ -1,6 +1,6 @@
 import tables
 import color
-import listup
+import repo
 import install
 import delete
 import strutils

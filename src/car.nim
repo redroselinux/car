@@ -4,7 +4,7 @@ import posix
 import strutils
 
 import operations/init
-import operations/listup
+import operations/repo
 import operations/install
 import operations/delete
 import operations/update
@@ -33,7 +33,6 @@ proc isRoot() =
 
 proc usage() =
   log_info "\e[1m\e[93mcar\e[0m v" & VERSION
-  echo ""
   log_info "\e[1mUsage:\e[0m"
   echo "  car [command] [options] [flags]"
   echo "\e[3m  You can mix some commands (e.g. sudo car listup install example)\e[0m"
@@ -63,7 +62,9 @@ proc usage() =
   echo "  \e[36mclearcache\e[0m           Clear all cache"
   echo "  \e[36mbrake/release\e[0m        Do not/do update this package"
   echo "\e[3m  car brake bun-js     \e[2myk why\e[0m"
-  log_info "\n\e[3mLicense: GPLv3-only\e[0m"
+  echo "  \e[36maddrepo\e[0m               Add a repository/mirror"
+  echo "\e[3m  car addrepo https://example.com/repo\e[0m\n"
+  log_info "\e[3mLicense: GPLv3-only\e[0m"
   log_info "\e[3mAuthor: Juraj Kollár <mostypc123@redroselinux.org>\e[0m"
 
 when isMainModule:
@@ -149,6 +150,14 @@ when isMainModule:
           usage()
           quit()
         releasePackages args[(i+1)..^1]
+        quit(0)
+      elif arg in ["addrepo", "add-repo"]:
+        if args.len < 2:
+          log_error "Missing repository URL"
+          usage()
+          quit()
+        isRoot()
+        addRepo args[i+1]
         quit(0)
       elif arg in ["--force"]:
         continue
