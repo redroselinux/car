@@ -2,7 +2,7 @@ import std/strutils
 
 version = "3.16"
 author = "Juraj Kollár"
-description = "A new awesome nimble package"
+description = "Package manager for Redrose Linux"
 license = "GPL-3.0-only"
 srcDir = "src"
 bin = @["car"]
