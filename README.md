@@ -1,6 +1,6 @@
 # `car`
 
-A very minimalistic insanely quick package manager. May also be reffered to as car/tar or glorified tar extractor.
+A very minimalistic insanely quick package manager. May also be referred to as car/tar or glorified tar extractor.
 Car is not meant to do hash checks or whatever; it purposely skips them for speed.
 It can convert .deb, .pkg.tar.zst and .AppImage packages to Car's own format - .tar.zst.
 
