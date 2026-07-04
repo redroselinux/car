@@ -1,6 +1,6 @@
 import std/strutils
 
-version = "3.16"
+version = "3.17"
 author = "Juraj Kollár"
 description = "Package manager for Redrose Linux"
 license = "GPL-3.0-only"

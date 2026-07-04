@@ -11,6 +11,7 @@ proc listup*() =
   except:
     log_error("No mirror is set. Did you run 'car init'?")
     quit()
+  writeFile("/etc/car/packagelist", "") # overwrite
   var mirrorParts: seq[string] = @[]
   var cur = ""
   for i, c in mirrors:

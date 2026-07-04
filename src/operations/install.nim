@@ -108,11 +108,11 @@ proc install_backend(file: string, displayNamec: string) =
     fail_level_word = "\e[1m\e[93mpartially sucesfully\e[0m"
   if version == "NONE" or version == "":
     log_ok(
-      "Installed " & displayName & " " & fail_level_word & " in " & $elapsed.inMilliseconds & " ms"
+      "Installed \e[1m" & displayName & "\e[0m " & fail_level_word & " in " & $elapsed.inMilliseconds & " ms"
     )
   else:
     log_ok(
-      "Installed " & displayName & " (" & version & ") " & fail_level_word & " in " & $elapsed.inMilliseconds & " ms"
+      "Installed \e[1m" & displayName & "\e[0m (" & version & ") " & fail_level_word & " in " & $elapsed.inMilliseconds & " ms"
     )
 
 var installedLegacy: seq[string] = @[]

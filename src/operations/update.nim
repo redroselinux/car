@@ -88,6 +88,12 @@ proc update*() =
                       else:
                         "packages"
 
+  if (updateAddPkg.len == 0) and (updateDelPkg.len == 0) and (updatable.len == 0):
+    fsckSymlinkAttacks("/etc/car/update")
+    writeFile("/etc/car/update", updateInfo)
+    log_done "System is fully up to date"
+    quit 0
+
   if updateAddPkg.len > 0:
     log_info("\e[92mAdding\e[0m " & $updateAddPkg.len & " " & adding_word & ":")
     echo("    " & updateAddPkg.join(", "))
