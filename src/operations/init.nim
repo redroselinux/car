@@ -56,9 +56,7 @@ proc createConfig() =
   fsckSymlinkAttacks("/etc/car/saves")
   createDir("/etc/car/saves")
 
-  try:
-    discard readFile("/etc/repro.car") # if suceeds, we are on a redrose system
-  except:
+  if not fileExists("/etc/repro.car"):
     # not a redrose system
     fsckSymlinkAttacks("/etc/repro.car")
     writeFile("/etc/repro.car", "")
