@@ -1,5 +1,5 @@
 repo primary
   mirror official https://github.com/redroselinux/car3-pkgs/raw/refs/heads/main/README << Will be migrated to a real server. Official primary repo.
 
-repo propriertary
+repo proprietary
   mirror official https://github.com/redroselinux/car-propiertary-repo/raw/refs/heads/main/README << Official propriertary repo.
