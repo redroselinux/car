@@ -50,3 +50,53 @@ proc addRepo*(repo: string) =
     repo_config.write(":" & repo)
   log_done "Added " & repo
   repo_config.close()
+
+proc getRepos*(): seq[seq[string]] =
+  let redroselive = fileExists("/etc/car/Bootstrap-RepoMirror")
+  if redroselive:
+    # Redrose installer live system, no /tmp here
+    createDir("/tmp")
+    moveFile("/etc/car/Bootstrap-RepoMirror", "/tmp/RepoMirrors")
+  else:
+    fsckSymlinkAttacks("/tmp/RepoMirrors")
+    log_info "Fetching RepoMirrors"
+    if execShellCmd("curl -s -L -o /tmp/RepoMirrors https://github.com/redroselinux/car/raw/refs/heads/main/RepoMirrors") != 0:
+      log_error "Failed to fetch RepoMirrors"
+      quit 1
+
+  let data = readFile("/tmp/RepoMirrors")
+  var repoName = ""
+
+  for i in data.splitLines():
+    let line = i.strip()
+
+    if line.startsWith("repo "):
+      repoName = line.split()[1]
+      continue
+
+    if not line.startsWith("mirror "):
+      continue
+
+    let marker = line.find("<<")
+
+    var mirrorPart = line
+    if marker != -1:
+      mirrorPart = line[0 ..< marker].strip()
+
+    let parts = mirrorPart.split()
+    let mirrorType = parts[1]
+    let url = parts[2]
+
+    var typeline = "\e[3m?\e[0m unknown    "
+    if mirrorType == "official":
+      typeline = "\e[1m\e[92m✔\e[0m official   "
+    elif mirrorType == "unofficial":
+      typeline = "\e[1m\e[93m⚠\e[0m unofficial "
+
+    let print =
+      if marker != -1:
+        url & "  " & typeline & "  " & line[marker + 2 .. ^1].strip()
+      else:
+        url & "  " & typeline
+
+    result.add(@[print, url, mirrorType, repoName])

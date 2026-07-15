@@ -1,7 +1,6 @@
 import os
 import color
 import posix
-import strutils
 
 import operations/init
 import operations/repo
@@ -14,10 +13,11 @@ import operations/search
 import operations/brake
 import operations/list
 
-{.passC: "-O3 -flto -funroll-loops -fstrict-aliasing -fomit-frame-pointer " &
-         "-ftree-vectorize -fprefetch-loop-arrays -floop-interchange " &
-         "-floop-block -floop-unroll-and-jam -ffast-math -fassociative-math " &
-         "-fno-trapping-math".}
+{.passC: "-O3 -fstrict-aliasing -fomit-frame-pointer " &
+         "-ftree-vectorize -floop-interchange -fno-trapping-math " &
+         "-floop-unroll-and-jam -ffast-math -fassociative-math " &
+         "-march=x86-64 -Wno-stringop-overflow".}
+{.passL: "-Wno-stringop-overflow".}
 
 var initMode = false
 var searchMode = false
@@ -50,6 +50,7 @@ proc usage() =
   echo "  \e[36minstall\e[0m              Install packages, supports Car .tar.zst, Pacman .pkg.tar.zst, AppImage and DPKG .deb"
   echo "\e[3m  car install example\e[0m"
   echo "\e[3m  car install legacy::example\e[0m"
+  echo "    --skip-sha256                 Skip SHA256 checks"
   echo "  \e[36mdelete\e[0m               Delete packages"
   echo "\e[3m  car delete example\e[0m"
   echo "  \e[36mupdate\e[0m               Run listup and perform system upgrade"
@@ -167,6 +168,8 @@ when isMainModule:
         searchMode = true
       elif arg == "tires":
         tiresMode = true
+      elif arg == "installer-init":
+        redroseInstallerCarInit()
       else:
         log_error "Unknown option: " & arg
         quit()
