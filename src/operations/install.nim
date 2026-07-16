@@ -104,9 +104,9 @@ proc install_backend(file: string, displayNamec: string) =
   repro_car = readFile("/etc/repro.car") # reload
 
   var elapsed = getTime() - start
-  var fail_level_word = "sucesfully"
+  var fail_level_word = "successfully"
   if fail_level == 1:
-    fail_level_word = "\e[1m\e[93mpartially sucesfully\e[0m"
+    fail_level_word = "\e[1m\e[93mpartially successfully\e[0m"
   if version == "NONE" or version == "":
     log_ok(
       "Installed \e[1m" & displayName & "\e[0m " & fail_level_word & " in " & $elapsed.inMilliseconds & " ms"
@@ -148,7 +148,7 @@ proc legacy_install(package: string) =
       quit(1)
 
   log_info("\e[1A\r\e[1m\e[94m→\e[0m Acquired install_script")
-  log_warn("Using legacy packages is not recomended. It may not work and it may break your system!")
+  log_warn("Using legacy packages is not recommended. It may not work and it may break your system!")
   stdout.write "         Continue? [y/N] "
 
   let confirm = readLine(stdin)
@@ -179,7 +179,7 @@ proc legacy_install(package: string) =
     "[(f:=ns.get(n)) and callable(f) and f() for n in ('beforeinst','deps','install','postinst')]\""
   ) != 0:
     log_error("Running install_script failed.")
-    log_warn("It is possible that the package was still installed succesfully. READ THE LOGS!")
+    log_warn("It is possible that the package was still installed successfully. READ THE LOGS!")
 
   log_warn("This package is not tracked by car. Try using old car for better results, which is also not recommended.")
 

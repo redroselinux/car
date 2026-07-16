@@ -34,7 +34,7 @@ proc listup*() =
   # however, the file is used quite often, so it was decided to keep it as it is.
   # https://docs.redroselinux.org/#/fhs?id=car_propiertarylock
   if fileExists("/etc/car_propiertary.lock"):
-    # propriertary enabled; legacy thing, but it is kept bceause the docs, installer etc
+    # propriertary enabled; legacy thing, but it is kept because the docs, installer etc
     log_info("Updating propriertary repo")
     fsckSymlinkAttacks("/etc/car/packagelist")
     if execShellCmd("curl -s -L https://github.com/redroselinux/car-propiertary-repo/raw/refs/heads/main/README >> /etc/car/packagelist") != 0:
