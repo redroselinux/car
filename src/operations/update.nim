@@ -6,9 +6,26 @@ import delete
 import strutils
 import sequtils
 import fsck_symlink_attacks
+import posix
+import os
+
+const VERSION = staticRead("../../Version")
 
 proc update*() =
   listup()
+  
+  var carupdate = false
+  log_info "Checking latest Car version"
+  fsckSymlinkAttacks("/tmp/CarVersion")
+  if execShellCmd("curl -sLo /tmp/CarVersion https://github.com/redroselinux/car/raw/refs/heads/main/Version") != 0:
+    log_error "Failed to fetch latest Car version"
+    quit 1
+  let version = readFile("/tmp/CarVersion").strip()
+  if VERSION.strip != version:
+    log_info "Car will be updated to " & version
+    carupdate = true
+  else:
+    log_ok "Car is up-to-date"
 
   let packagelist = readFile("/etc/car/packagelist")
   let repro = readFile("/etc/repro.car")
@@ -21,7 +38,8 @@ proc update*() =
   # before the first friday after the addition of it
   if not header.startsWith("UPDATE:"):
     log_warn "No update available"
-    log_info "Run news-reader to see what caused this; this is an edge case."
+    log_info "Running news-reader so you can see what caused this; this is an edge case."
+    discard execShellCmd("news-reader")
     return
 
   let parts = header.split(":", 4)
@@ -88,7 +106,7 @@ proc update*() =
                       else:
                         "packages"
 
-  if (updateAddPkg.len == 0) and (updateDelPkg.len == 0) and (updatable.len == 0):
+  if (updateAddPkg.len == 0) and (updateDelPkg.len == 0) and (updatable.len == 0) and (not carupdate):
     fsckSymlinkAttacks("/etc/car/update")
     writeFile("/etc/car/update", updateInfo)
     log_done "System is fully up to date"
@@ -103,6 +121,8 @@ proc update*() =
   if updatable.len > 0:
     log_info("\e[94mUpdating\e[0m " & $updatable.len & " " & packages_word & ":")
     echo("    " & updatable.join(", "))
+  if carupdate:
+    log_info("\e[92mCar will be updated to " & version & "\e[0m")
   stdout.write "  Continue? [Y/n] "
   let confirm = readLine(stdin).toLowerAscii()
   if confirm.startsWith("y") or confirm == "":
@@ -122,5 +142,11 @@ proc update*() =
     writeFile("/etc/car/saves/" & pkg & "-update", "Package was installed by maintainer-issued update.")
   delete(updateDelPkg)
   install(updatable, force=true)
-
+  
+  log_info "Updating Car"
+  if execShellCmd("curl -sLo /usr/bin/car https://github.com/redroselinux/car/releases/latest/download/car") != 0:
+    log_error "Failed to update Car"
+    quit 1
+  discard chmod("/usr/bin/car".cstring, 0o755)
+    
   log_warn("Finished system upgrade - you should reboot your system right now")
