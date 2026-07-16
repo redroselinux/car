@@ -325,6 +325,7 @@ proc install*(packages: seq[string], force=false, running_as_dep=false) =
       displayName = displayName[displayName.rfind("/") + 1 .. ^1]
     displayName = stripSuffix(displayName, ".tar.zst")
     install_backend i, displayName
+    install deps, running_as_dep=true
 
   for i in deb_convert_packages:
     install @[convertDebPackage(i)]
