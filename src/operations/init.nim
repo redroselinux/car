@@ -7,6 +7,48 @@ import fsck_symlink_attacks
 proc isInited*(): bool =
   dirExists("/etc/car")
 
+proc writeMirror() =
+  let repos = getRepos()
+  var mirrors: seq[string]
+
+  var currentRepo = ""
+  var choices: seq[seq[string]]
+
+  for repo in repos:
+    if repo[3] != currentRepo:
+      if currentRepo != "":
+        stdout.write("> ")
+        var choice = readLine(stdin)
+
+        if choice == "":
+          choice = if currentRepo == "proprietary": "0" else: "1"
+
+        if not (currentRepo == "proprietary" and choice == "0"):
+          mirrors.add(choices[parseInt(choice) - 1][1])
+
+      currentRepo = repo[3]
+      choices.setLen(0)
+      log_pick("Which provider for " & currentRepo & " do you want?")
+
+      if currentRepo == "proprietary":
+        log_option("[0]: None")
+
+    choices.add(repo)
+    log_option("[" & $choices.len & "]: " & repo[0])
+
+  if choices.len != 0:
+    stdout.write("> ")
+    var choice = readLine(stdin)
+
+    if choice == "":
+      choice = if currentRepo == "proprietary": "0" else: "1"
+
+    if not (currentRepo == "proprietary" and choice == "0"):
+      mirrors.add(choices[parseInt(choice) - 1][1])
+
+  fsckSymlinkAttacks("/etc/car/mirror")
+  writeFile("/etc/car/mirror", mirrors.join(":"))
+
 proc createConfig() =
   fsckSymlinkAttacks("/etc/car")
   createDir("/etc/car")
@@ -14,30 +56,12 @@ proc createConfig() =
   fsckSymlinkAttacks("/etc/car/saves")
   createDir("/etc/car/saves")
 
-  try:
-    fsckSymlinkAttacks("/etc/repro.car")
-    discard readFile("/etc/repro.car") # if suceeds, we are on a redrose system
-  except:
+  if not fileExists("/etc/repro.car"):
     # not a redrose system
     fsckSymlinkAttacks("/etc/repro.car")
     writeFile("/etc/repro.car", "")
 
-  log_pick("Mirror (pick one close to you) [default 1]")
-  let mirrors = ["https://github.com/redroselinux/car3-pkgs/raw/refs/heads/main/README"]
-
-  var counter = 1
-  for i in mirrors:
-    log_option("[" & $counter & "]: " & i)
-    counter += 1
-
-  stdout.write "> "
-  var mirror = readLine(stdin)
-
-  if mirror == "":
-    mirror = "1"
-
-  fsckSymlinkAttacks("/etc/car/mirror")
-  writeFile("/etc/car/mirror", mirrors[parseInt(mirror) - 1])
+  writeMirror()
 
   fsckSymlinkAttacks("/etc/car/packagelist")
   writeFile("/etc/car/packagelist", "")
@@ -57,3 +81,7 @@ proc init*(force: bool) =
   else:
     log_warn("Forced re-init")
     createConfig()
+
+proc redroseInstallerCarInit*() =
+  createConfig()
+  writeMirror()

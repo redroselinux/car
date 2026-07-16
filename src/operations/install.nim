@@ -5,6 +5,7 @@ import color
 import init
 import times
 import fsck_symlink_attacks
+import streams
 
 import ../converters/debian
 import ../converters/appimage
@@ -103,9 +104,9 @@ proc install_backend(file: string, displayNamec: string) =
   repro_car = readFile("/etc/repro.car") # reload
 
   var elapsed = getTime() - start
-  var fail_level_word = "sucesfully"
+  var fail_level_word = "successfully"
   if fail_level == 1:
-    fail_level_word = "\e[1m\e[93mpartially sucesfully\e[0m"
+    fail_level_word = "\e[1m\e[93mpartially successfully\e[0m"
   if version == "NONE" or version == "":
     log_ok(
       "Installed \e[1m" & displayName & "\e[0m " & fail_level_word & " in " & $elapsed.inMilliseconds & " ms"
@@ -147,7 +148,7 @@ proc legacy_install(package: string) =
       quit(1)
 
   log_info("\e[1A\r\e[1m\e[94m→\e[0m Acquired install_script")
-  log_warn("Using legacy packages is not recomended. It may not work and it may break your system!")
+  log_warn("Using legacy packages is not recommended. It may not work and it may break your system!")
   stdout.write "         Continue? [y/N] "
 
   let confirm = readLine(stdin)
@@ -178,7 +179,7 @@ proc legacy_install(package: string) =
     "[(f:=ns.get(n)) and callable(f) and f() for n in ('beforeinst','deps','install','postinst')]\""
   ) != 0:
     log_error("Running install_script failed.")
-    log_warn("It is possible that the package was still installed succesfully. READ THE LOGS!")
+    log_warn("It is possible that the package was still installed successfully. READ THE LOGS!")
 
   log_warn("This package is not tracked by car. Try using old car for better results, which is also not recommended.")
 
@@ -194,8 +195,13 @@ proc install*(packages: seq[string], force=false, running_as_dep=false) =
   var appimage_convert_packages: seq[string]
   var remote_packages: seq[string]
   var remote_downloads: seq[(string, string, string)]
+  var sha256: seq[seq[string]]
+  var skip_sha256 = false
 
   for pkg in packages:
+    if pkg == "--skip-sha256":
+      skip_sha256 = true
+      continue
     # the system is upgrading and this is what brake does h
     if fileExists("/etc/car/saves/" & pkg & "-brake"):
       log_option "Skipping " & pkg & ": package is braked"
@@ -224,16 +230,24 @@ proc install*(packages: seq[string], force=false, running_as_dep=false) =
       appimage_convert_packages.add(pkg)
       continue
     let cachePath = "/var/cache/" & pkg & ".tar.zst"
+    for line in packagelist.splitLines():
+      if line.len == 0 or line.startsWith("version"):
+        continue
+      if line.startsWith(pkg & " - "):
+        let parts = line.split(" - ")
+        if parts.len == 3:
+          sha256.add(@[parts[0], parts[2]])
     if not download_disable:
       var download = ""
       for line in packagelist.splitLines():
         if line.len == 0 or line.startsWith("version"):
           continue
         if line.startsWith(pkg & " - "):
-          let parts = line.split(" - ", 1)
+          let parts = line.split(" - ")
           if parts.len == 2:
             download = parts[1].strip()
-            break
+          if parts.len == 3:
+            download = parts[1].strip()
       if download.len == 0:
         log_error("Package " & pkg & " not found - skipping")
         continue
@@ -278,6 +292,29 @@ proc install*(packages: seq[string], force=false, running_as_dep=false) =
       stdout.write("\e[1A\r\e[J")
     flushFile(stdout)
 
+  if fileExists("/etc/car/sha256-enable") and (not skip_sha256):
+    var counter: int = 0
+    for i in sha256:
+      let pkg = i[0]
+      let psum = i[1].strip()
+      var p = startProcess("sha256sum", args = ["/var/cache/" & pkg & ".tar.zst"], options = {poUsePath})
+      let output = streams.readAll(p.outputStream)
+      let c = p.waitForExit()
+      p.close()
+      if c != 0:
+        log_error "SHA256 checksum failed for package " & pkg
+        quit 1
+      let csum = output.split(" ")[0].strip()
+      if (csum != psum):
+        log_error "SHA256 checksum failed for package " & pkg
+        quit 1
+      counter+=1
+    if counter != 0:
+      log_info "Checked " & $counter & " packages' checksums"
+  if skip_sha256:
+    log_pick "Tip: you can disable SHA256 checks entirely:"
+    echo "  rm /etc/car/sha256-enable"
+
   for i in local_packages:
     if i in already_installed_packages:
       if not running_as_dep:
@@ -288,6 +325,7 @@ proc install*(packages: seq[string], force=false, running_as_dep=false) =
       displayName = displayName[displayName.rfind("/") + 1 .. ^1]
     displayName = stripSuffix(displayName, ".tar.zst")
     install_backend i, displayName
+    install deps, running_as_dep=true
 
   for i in deb_convert_packages:
     install @[convertDebPackage(i)]
@@ -307,3 +345,4 @@ proc install*(packages: seq[string], force=false, running_as_dep=false) =
     install_backend i, displayName
 
     install deps, running_as_dep=true
+

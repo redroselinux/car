@@ -1,6 +1,6 @@
 import std/strutils
 
-version = "3.17"
+version = "3.18"
 author = "Juraj Kollár"
 description = "Package manager for Redrose Linux"
 license = "GPL-3.0-only"
@@ -8,6 +8,7 @@ srcDir = "src"
 bin = @["car"]
 
 switch("mm", "arc")
+switch("opt", "speed")
 
 requires "nim >= 2.2.6"
 

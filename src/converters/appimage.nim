@@ -18,7 +18,7 @@ proc convertAppImage*(appimage: string): string =
   var version = "none"
 
   log_info "Extracting the AppImage"
-  if chmod(file, 0o755) != 0:
+  if chmod(file.cstring, 0o755) != 0:
     log_error "Failed to set execute permission bit on the AppImage."
     quit 1
   if execShellCmd(file & " --appimage-extract") != 0:
@@ -61,8 +61,9 @@ proc convertAppImage*(appimage: string): string =
   createDir("package")
   createDir("package/usr")
   createDir("package/usr/bin")
-  copyFile(file, "package/usr/bin/" & name)
-  if chmod("package/usr/bin/" & name, 0o755) != 0:
+  let binPath = "package/usr/bin/" & name
+  copyFile(file, binPath)
+  if chmod(binPath.cstring, 0o755) != 0:
     log_error "Failed to set execute permission bit."
     quit 1
   writeFile(
