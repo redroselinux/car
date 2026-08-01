@@ -189,6 +189,7 @@ proc install*(packages: seq[string], force=false, running_as_dep=false) =
     log_error("Run 'car init' to initialize car")
     quit(2)
   let packagelist = readFile("/etc/car/packagelist")
+  let packagelist_lines = packagelist.splitLines()
 
   var local_packages: seq[string]
   var deb_convert_packages: seq[string]
@@ -230,7 +231,7 @@ proc install*(packages: seq[string], force=false, running_as_dep=false) =
       appimage_convert_packages.add(pkg)
       continue
     let cachePath = "/var/cache/" & pkg & ".tar.zst"
-    for line in packagelist.splitLines():
+    for line in packagelist_lines:
       if line.len == 0 or line.startsWith("version"):
         continue
       if line.startsWith(pkg & " - "):
@@ -239,19 +240,23 @@ proc install*(packages: seq[string], force=false, running_as_dep=false) =
           sha256.add(@[parts[0], parts[2]])
     if not download_disable:
       var download = ""
-      for line in packagelist.splitLines():
+      var resolvedName = pkg
+      for line in packagelist_lines:
         if line.len == 0 or line.startsWith("version"):
           continue
-        if line.startsWith(pkg & " - "):
-          let parts = line.split(" - ")
-          if parts.len == 2:
-            download = parts[1].strip()
-          if parts.len == 3:
-            download = parts[1].strip()
+        let lineParts = line.split(" - ")
+        if lineParts.len < 2:
+          continue
+        let aliases = lineParts[0].split("///")
+        if pkg in aliases:
+          resolvedName = aliases[0]  # master name is always first
+          if lineParts.len == 2 or lineParts.len == 3:
+            download = lineParts[1].strip()
+          break
       if download.len == 0:
         log_error("Package " & pkg & " not found - skipping")
         continue
-      remote_downloads.add((pkg, download, cachePath))
+      remote_downloads.add((resolvedName, download, cachePath))
     remote_packages.add cachePath
 
   if remote_downloads.len > 0:
