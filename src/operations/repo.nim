@@ -40,6 +40,10 @@ proc listup*() =
     if execShellCmd("curl -s -L https://github.com/redroselinux/car-propiertary-repo/raw/refs/heads/main/README >> /etc/car/packagelist") != 0:
       log_error("Failed to update package list")
     log_done "Package list updated"
+  for line in readFile("/etc/car/packagelist").splitLines():
+    if line.startsWith("LISTUP-WARN:"):
+      log_warn "\e[1mWarning from mirror\e[0m: " & line[12 .. ^1]
+    
 
 proc addRepo*(repo: string) =
   let mirror = readFile("/etc/car/mirror").strip()
