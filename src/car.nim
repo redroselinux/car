@@ -12,6 +12,7 @@ import operations/clear_cache
 import operations/search
 import operations/brake
 import operations/list
+import operations/checksum
 
 {.passC: "-O3 -fstrict-aliasing -fomit-frame-pointer " &
          "-ftree-vectorize -floop-interchange -fno-trapping-math " &
@@ -65,6 +66,8 @@ proc usage() =
   echo "\e[3m  car brake bun-js     \e[2myk why\e[0m"
   echo "  \e[36maddrepo\e[0m               Add a repository/mirror"
   echo "\e[3m  car addrepo https://example.com/repo\e[0m\n"
+  echo "  \e[36mchecksum\e[0m             Show the chesksum of all files of a package"
+  echo "\e[3m  car checksum example\e[0m"
   log_info "\e[3mLicense: GPLv3-only\e[0m"
   log_info "\e[3mAuthor: Juraj Kollár <mostypc123@redroselinux.org>\e[0m"
 
@@ -152,6 +155,14 @@ when isMainModule:
           quit()
         releasePackages args[(i+1)..^1]
         quit(0)
+      elif arg == "checksum":
+        if args.len < 2:
+          log_error "Missing package name"
+          usage()
+          quit()
+        checkSumOfFilesOfAPackage args[i+1]
+        quit(0)
+      
       elif arg in ["addrepo", "add-repo"]:
         if args.len < 2:
           log_error "Missing repository URL"
